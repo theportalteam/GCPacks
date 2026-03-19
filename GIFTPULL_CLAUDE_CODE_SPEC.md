@@ -22,12 +22,13 @@
 12. [Feature 6: P2P Marketplace (WS3)](#12-feature-6-p2p-marketplace-ws3)
 13. [Feature 7: Payments — Stripe + USDC on Base](#13-feature-7-payments--stripe--usdc-on-base)
 14. [Feature 8: Admin Dashboard](#14-feature-8-admin-dashboard)
-15. [UI/UX Design Direction](#15-uiux-design-direction)
-16. [Page Routes & Navigation](#16-page-routes--navigation)
-17. [API Route Specification](#17-api-route-specification)
-18. [Gacha Engine — Full Implementation Logic](#18-gacha-engine--full-implementation-logic)
-19. [Testing Checklist & Acceptance Criteria](#19-testing-checklist--acceptance-criteria)
-20. [Build Order (Recommended Sequence)](#20-build-order-recommended-sequence)
+15. [Feature 9: Leaderboard & Rankings](#15-feature-9-leaderboard--rankings)
+16. [UI/UX Design Direction](#16-uiux-design-direction)
+17. [Page Routes & Navigation](#17-page-routes--navigation)
+18. [API Route Specification](#18-api-route-specification)
+19. [Gacha Engine — Full Implementation Logic](#19-gacha-engine--full-implementation-logic)
+20. [Testing Checklist & Acceptance Criteria](#20-testing-checklist--acceptance-criteria)
+21. [Build Order (Recommended Sequence)](#21-build-order-recommended-sequence)
 
 ---
 
@@ -111,6 +112,8 @@ giftpull/
 │   │   │   ├── page.tsx       # Browse P2P listings
 │   │   │   ├── sell/page.tsx  # Create a listing
 │   │   │   └── [listingId]/page.tsx    # Listing detail
+│   │   ├── leaderboard/
+│   │   │   └── page.tsx       # Weekly/monthly leaderboard with prizes
 │   │   ├── wallet/
 │   │   │   └── page.tsx       # USDC balance, points, transaction history
 │   │   ├── admin/
@@ -131,6 +134,9 @@ giftpull/
 │   │       │   ├── listings/route.ts   # GET: browse, POST: create
 │   │       │   ├── buy/route.ts        # POST: purchase listing
 │   │       │   └── dispute/route.ts    # POST: open dispute
+│   │       ├── leaderboard/
+│   │       │   ├── route.ts            # GET: ranked leaderboard
+│   │       │   └── prizes/route.ts     # GET: prizes by period
 │   │       ├── points/
 │   │       │   ├── balance/route.ts    # GET: balance + ledger
 │   │       │   └── redeem/route.ts     # POST: redeem points
@@ -152,7 +158,8 @@ giftpull/
 │   │   ├── auth.ts            # NextAuth config
 │   │   ├── stripe.ts          # Stripe client + helpers
 │   │   ├── gacha-engine.ts    # Core gacha pull logic (THE key file)
-│   │   ├── points.ts          # Points earn/redeem logic
+│   │   ├── points.ts          # Points earn/redeem logic + leaderboard tracking
+│   │   ├── leaderboard.ts    # Leaderboard computation, period bounds, ranking
 │   │   ├── buyback.ts         # Buyback calculation + execution
 │   │   └── utils.ts           # Formatting, currency, shared helpers
 │   ├── types/
@@ -312,6 +319,11 @@ enum PointsType {
   ADMIN_ADJUST
 }
 
+enum LeaderboardPeriod {
+  WEEKLY
+  MONTHLY
+}
+
 enum SellerTier {
   NEW
   VERIFIED
@@ -367,9 +379,11 @@ model User {
   pointsLedger    PointsLedger[]
   sellerListings  P2PListing[]  @relation("Seller")
   buyerListings   P2PListing[]  @relation("Buyer")
-  pullHistory     GachaPull[]
-  accounts        Account[]
-  sessions        Session[]
+  pullHistory          GachaPull[]
+  packUnlocks          UserPackUnlock[]
+  leaderboardEntries   LeaderboardEntry[]
+  accounts             Account[]
+  sessions             Session[]
 }
 
 // NextAuth models
@@ -552,6 +566,37 @@ model BundleItem {
   denomination Float
   quantity     Int           @default(1)
 }
+
+// ─── LEADERBOARD ──────────────────────────────────────────
+
+model LeaderboardEntry {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id])
+  period       LeaderboardPeriod
+  periodStart  DateTime
+  periodEnd    DateTime
+  pointsEarned Int               @default(0)
+  rank         Int?
+  prizeAwarded Boolean           @default(false)
+  prizeDetails Json?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([userId, period, periodStart])
+}
+
+model LeaderboardPrize {
+  id         String            @id @default(cuid())
+  period     LeaderboardPeriod
+  rankMin    Int
+  rankMax    Int
+  prizeType  String            // "GIFT_CARD" or "POINTS"
+  prizeValue Float
+  prizeLabel String
+  isActive   Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+}
 ```
 
 ---
@@ -621,6 +666,28 @@ Epic pack ($75) odds:
 **Sample transactions (20+):** Pre-populate pull history, storefront purchases, and a few P2P sales for alice@test.com so the dashboard and history pages have data to render.
 
 **Sample P2P listings (5):** Create active listings from alice@test.com at various prices.
+
+**Fake leaderboard users (30):** Create 30 additional users with randomized names (e.g., CryptoKing, GachaQueen, LuckyDraw7, etc.) for populating the leaderboard with realistic data.
+
+**Leaderboard prizes (13):**
+
+| Period | Rank Range | Prize Type | Prize |
+|--------|-----------|------------|-------|
+| WEEKLY | #1 | GIFT_CARD | $100 Gift Card |
+| WEEKLY | #2 | GIFT_CARD | $50 Gift Card |
+| WEEKLY | #3 | GIFT_CARD | $25 Gift Card |
+| WEEKLY | #4-5 | POINTS | 5,000 Points |
+| WEEKLY | #6-10 | POINTS | 2,500 Points |
+| WEEKLY | #11-25 | POINTS | 1,000 Points |
+| MONTHLY | #1 | GIFT_CARD | $500 Gift Card |
+| MONTHLY | #2 | GIFT_CARD | $250 Gift Card |
+| MONTHLY | #3 | GIFT_CARD | $100 Gift Card |
+| MONTHLY | #4-5 | GIFT_CARD | $50 Gift Card |
+| MONTHLY | #6-10 | POINTS | 10,000 Points |
+| MONTHLY | #11-25 | POINTS | 5,000 Points |
+| MONTHLY | #26-50 | POINTS | 2,000 Points |
+
+**Sample leaderboard entries (66):** Create WEEKLY and MONTHLY entries for all 33 users (3 core + 30 fake) with varying point totals to create a natural distribution for the current period.
 
 ---
 
@@ -798,6 +865,7 @@ Show points balance in the navbar (always visible). On the wallet page, show a f
 - User.pointsBalance is the denormalized running total (updated atomically with ledger insert)
 - Points cannot go negative — validate before redemption
 - For the prototype, skip expiry logic (note: production adds 12-month inactivity expiry)
+- Every `earnPoints()` call automatically records points for the leaderboard via `recordPointsForLeaderboard()` (fire-and-forget, non-blocking)
 
 ---
 
@@ -923,7 +991,75 @@ Charts (use Recharts or simple stat displays):
 
 ---
 
-## 15. UI/UX DESIGN DIRECTION
+## 15. FEATURE 9: LEADERBOARD & RANKINGS
+
+### Overview
+
+A competitive leaderboard system that tracks points earned per user across weekly and monthly periods. Top-ranked players win prizes (gift cards or bonus points). All points earned anywhere in the app automatically feed into leaderboard tracking.
+
+### Core logic: `src/lib/leaderboard.ts`
+
+**Period bounds:**
+- Weekly: Monday 00:00 UTC → Sunday 23:59 UTC
+- Monthly: 1st 00:00 UTC → last day 23:59 UTC
+
+**Key functions:**
+- `getWeekBounds(date)` / `getMonthBounds(date)` — calculate period start/end
+- `getPeriodBounds(period, date)` — dispatcher for WEEKLY/MONTHLY
+- `getSecondsUntilPeriodEnd(period, date)` — countdown helper
+- `recordPointsForLeaderboard(userId, points)` — upserts WEEKLY + MONTHLY entries atomically
+- `getLeaderboard(period, date, limit, offset)` — ranked list with user data
+- `getUserRank(userId, period, date)` — user's current rank and points
+- `getPrizeForRank(rank, period)` — prize lookup by rank
+- `getPrizes(period)` — all active prizes for a period
+
+### Integration with points system
+
+The `earnPoints()` function in `src/lib/points.ts` automatically calls `recordPointsForLeaderboard()` as a fire-and-forget operation after every point award. This means all points sources feed into the leaderboard:
+- Storefront purchases (1 pt/$1)
+- Gacha pulls (2 pts/$1)
+- P2P marketplace sales (0.5 pts/$1)
+- Daily login (5 pts)
+- Referrals (100 pts)
+- USDC multiplier (1.25x)
+- Bundle multiplier (1.5x)
+
+### Page: `/leaderboard`
+
+**Hero banner:** Gradient background with trophy icon, title, description. If authenticated, shows the user's current rank and points earned in a highlighted card.
+
+**Period tabs:** Toggle between Weekly and Monthly views. Active tab is highlighted with primary color.
+
+**Countdown timer:** Shows time remaining until the current period ends. Ticks every second. Format: `Xd Xh Xm` or `Xh Xm Xs`.
+
+**Prize table (left sidebar):** Lists all prizes for the selected period. Each row shows rank range, prize type icon, and prize label badge. Crown icon for #1, gift icon for gift card prizes, star icon for points prizes.
+
+**Points explainer (left sidebar):** Lists all ways to earn points with icons and values:
+- Storefront Purchase: 1 pt / $1
+- Gacha Pull: 2 pts / $1
+- P2P Sale: 0.5 pts / $1
+- Daily Login: 5 pts
+- Referral: 100 pts
+- USDC Bonus: 1.25x
+
+**Ranked leaderboard table (right, 2/3 width):**
+- Column headers: Rank, Player, Points
+- Top 3 rows have special styling (gold/silver/bronze gradients, crown/medal icons)
+- Current user's row highlighted with primary color border
+- Rank change indicators: chevron up (green), chevron down (red), dash (no change)
+- Player avatars with initial letter, truncated names
+- Framer Motion `AnimatePresence` for smooth row reordering on refresh
+- Shows total player count in header
+
+**Auto-refresh:** Polls `/api/leaderboard` every 60 seconds to update rankings. No WebSocket needed.
+
+### Navigation
+
+The Navbar includes a "Leaderboard" link with a trophy icon (lucide-react `Trophy`), positioned after "Marketplace" in the nav links array.
+
+---
+
+## 16. UI/UX DESIGN DIRECTION
 
 ### Aesthetic: "Neon Arcade meets Clean Commerce"
 
@@ -962,12 +1098,12 @@ The visual identity should feel like a premium, modern gaming storefront — thi
 
 ---
 
-## 16. PAGE ROUTES & NAVIGATION
+## 17. PAGE ROUTES & NAVIGATION
 
 ### Main navigation (always visible)
 
 ```
-Logo (home) | Storefront | Gacha Packs | Marketplace | [Wallet: 💰 2,500 pts | $50.00] | [Avatar dropdown: Profile, Admin*, Logout]
+Logo (home) | Storefront | Gacha Packs | Marketplace | 🏆 Leaderboard | [Wallet: 💰 2,500 pts | $50.00] | [Avatar dropdown: Profile, Admin*, Logout]
 ```
 
 *Admin link only visible if user.isAdmin
@@ -988,6 +1124,7 @@ Logo (home) | Storefront | Gacha Packs | Marketplace | [Wallet: 💰 2,500 pts |
 | `/marketplace/sell` | Auth required | Create a listing |
 | `/marketplace/[listingId]` | Public | Listing detail |
 | `/wallet` | Auth required | Balances, transactions, points ledger |
+| `/leaderboard` | Public (rank badge requires auth) | Weekly/monthly leaderboard with prizes |
 | `/admin` | Admin only | Dashboard overview |
 | `/admin/inventory` | Admin only | Gift card management |
 | `/admin/gacha` | Admin only | Pack and odds configuration |
@@ -995,7 +1132,7 @@ Logo (home) | Storefront | Gacha Packs | Marketplace | [Wallet: 💰 2,500 pts |
 
 ---
 
-## 17. API ROUTE SPECIFICATION
+## 18. API ROUTE SPECIFICATION
 
 All routes are Next.js App Router API routes (`src/app/api/...`). Return JSON. Use proper HTTP status codes. Authenticate via `getServerSession`.
 
@@ -1095,9 +1232,22 @@ POST /api/webhooks/stripe
   → Fulfills pending transactions
 ```
 
+### Leaderboard
+
+```
+GET  /api/leaderboard?period=WEEKLY|MONTHLY&limit=50&offset=0
+  → { period, periodStart, periodEnd, secondsRemaining, total, rows: LeaderboardRow[], myRank: { rank, pointsEarned } | null }
+  → LeaderboardRow: { rank, userId, userName, userImage, pointsEarned }
+  → If authenticated, includes myRank for the current user
+
+GET  /api/leaderboard/prizes?period=WEEKLY|MONTHLY
+  → { period, prizes: LeaderboardPrize[] }
+  → LeaderboardPrize: { id, period, rankMin, rankMax, prizeType, prizeValue, prizeLabel, isActive }
+```
+
 ---
 
-## 18. GACHA ENGINE — FULL IMPLEMENTATION LOGIC
+## 19. GACHA ENGINE — FULL IMPLEMENTATION LOGIC
 
 **File: `src/lib/gacha-engine.ts`**
 
@@ -1307,7 +1457,7 @@ async function executeBuyback(userId: string, giftCardId: string) {
 
 ---
 
-## 19. TESTING CHECKLIST & ACCEPTANCE CRITERIA
+## 20. TESTING CHECKLIST & ACCEPTANCE CRITERIA
 
 **Every item below must be manually testable in the browser at `localhost:3000`.**
 
@@ -1393,6 +1543,18 @@ async function executeBuyback(userId: string, giftCardId: string) {
 - [ ] Can pause gacha (kill switch)
 - [ ] Can view users and adjust points
 
+### Leaderboard
+- [ ] `/leaderboard` displays ranked players with points from seed data
+- [ ] Weekly/Monthly tab switching works and loads different data
+- [ ] Countdown timer ticks down and displays correct time remaining
+- [ ] Prize table shows correct prizes for each period
+- [ ] Authenticated user's rank is highlighted in the table
+- [ ] Hero banner shows user's current rank and points when logged in
+- [ ] Auto-refresh updates rankings every 60 seconds
+- [ ] Points explainer shows all earning methods with correct values
+- [ ] Navbar shows "Leaderboard" link with trophy icon
+- [ ] Points earned from purchases/gacha/etc. automatically update leaderboard entries
+
 ### Responsive
 - [ ] All pages render correctly at 375px width (mobile)
 - [ ] All pages render correctly at 768px width (tablet)
@@ -1401,7 +1563,7 @@ async function executeBuyback(userId: string, giftCardId: string) {
 
 ---
 
-## 20. BUILD ORDER (RECOMMENDED SEQUENCE)
+## 21. BUILD ORDER (RECOMMENDED SEQUENCE)
 
 Follow this order. Each step should result in a testable increment.
 
@@ -1456,12 +1618,23 @@ Step 29: Build /admin/gacha — odds editor, EV monitor, kill switch
 Step 30: Build /admin/users — user table, points adjustment
          ✅ CHECKPOINT: Full prototype complete, all flows testable
 
-PHASE 6: POLISH
+PHASE 6: LEADERBOARD & RANKINGS
+─────────────────────────────────
+Step 31: Add LeaderboardEntry, LeaderboardPrize models to schema
+Step 32: Create leaderboard computation logic (src/lib/leaderboard.ts)
+Step 33: Create API routes: GET /api/leaderboard, GET /api/leaderboard/prizes
+Step 34: Build /leaderboard page — hero, tabs, countdown, prizes, ranked table
+Step 35: Wire recordPointsForLeaderboard into earnPoints (fire-and-forget)
+Step 36: Seed 30 fake users, prize tables, sample leaderboard entries
+Step 37: Add Leaderboard link + trophy icon to Navbar
+         ✅ CHECKPOINT: Leaderboard shows rankings, auto-refreshes, prizes visible
+
+PHASE 7: POLISH
 ───────────────
-Step 31: Responsive pass on all pages (mobile, tablet, desktop)
-Step 32: Animation polish — page transitions, hover states, micro-interactions
-Step 33: Error handling — loading states, empty states, error boundaries
-Step 34: Final seed data check — ensure enough data for realistic testing
+Step 38: Responsive pass on all pages (mobile, tablet, desktop)
+Step 39: Animation polish — page transitions, hover states, micro-interactions
+Step 40: Error handling — loading states, empty states, error boundaries
+Step 41: Final seed data check — ensure enough data for realistic testing
          ✅ FINAL: Dev prototype ready for QA and demo
 ```
 

@@ -88,6 +88,11 @@ enum PointsType {
   ADMIN_ADJUST
 }
 
+enum LeaderboardPeriod {
+  WEEKLY
+  MONTHLY
+}
+
 enum SellerTier {
   NEW
   VERIFIED
@@ -144,9 +149,10 @@ model User {
   sellerListings  P2PListing[]   @relation("Seller")
   buyerListings   P2PListing[]   @relation("Buyer")
   pullHistory     GachaPull[]
-  packUnlocks     UserPackUnlock[]
-  accounts        Account[]
-  sessions        Session[]
+  packUnlocks         UserPackUnlock[]
+  leaderboardEntries  LeaderboardEntry[]
+  accounts            Account[]
+  sessions            Session[]
 }
 
 model Account {
@@ -327,4 +333,35 @@ model BundleItem {
   brand        GiftCardBrand
   denomination Float
   quantity     Int           @default(1)
+}
+
+// ─── LEADERBOARD ──────────────────────────────────────────
+
+model LeaderboardEntry {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id])
+  period       LeaderboardPeriod
+  periodStart  DateTime
+  periodEnd    DateTime
+  pointsEarned Int               @default(0)
+  rank         Int?
+  prizeAwarded Boolean           @default(false)
+  prizeDetails Json?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([userId, period, periodStart])
+}
+
+model LeaderboardPrize {
+  id         String            @id @default(cuid())
+  period     LeaderboardPeriod
+  rankMin    Int
+  rankMax    Int
+  prizeType  String
+  prizeValue Float
+  prizeLabel String
+  isActive   Boolean           @default(true)
+  createdAt  DateTime          @default(now())
 }

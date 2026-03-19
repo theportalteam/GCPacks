@@ -1,4 +1,4 @@
-import { PrismaClient, GiftCardBrand, GiftCardStatus, GiftCardSource, PackTier, RarityTier, TransactionType, PaymentMethod, TransactionStatus, PointsType, SellerTier, ListingStatus } from '@prisma/client';
+import { PrismaClient, GiftCardBrand, GiftCardStatus, GiftCardSource, PackTier, RarityTier, TransactionType, PaymentMethod, TransactionStatus, PointsType, SellerTier, ListingStatus, LeaderboardPeriod } from '@prisma/client';
 import { hashSync } from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -58,6 +58,8 @@ async function main() {
   console.log('Clearing existing data...');
 
   // Delete in FK-safe order (children first)
+  await prisma.leaderboardEntry.deleteMany();
+  await prisma.leaderboardPrize.deleteMany();
   await prisma.userPackUnlock.deleteMany();
   await prisma.gachaPull.deleteMany();
   await prisma.gachaOdds.deleteMany();
@@ -720,6 +722,117 @@ async function main() {
   );
   console.log(`Created ${ledgerEntries.length} points ledger entries.`);
 
+  // ─── Fake Users for Leaderboard (30) ───────────────────
+
+  console.log('Creating fake leaderboard users...');
+
+  const fakeNames = [
+    'CryptoKing', 'GachaQueen', 'LuckyDraw7', 'PackHunter', 'CardShark99',
+    'NeonPull', 'GiftGuru', 'RareFinder', 'EpicWhale', 'DailyGrinder',
+    'StreakMaster', 'BundleBoss', 'TopDeck', 'MintCondition', 'PullGod',
+    'SteamLord', 'XboxElite', 'NintendoFan', 'PSNKing', 'RobloxPro',
+    'AppleFiend', 'AmazonAce', 'SpotifyVIP', 'NetflixNerd', 'DiamondHands',
+    'PointsHoarder', 'GoldRush', 'SilverLining', 'BronzeBeast', 'PlatinumPuller',
+  ];
+
+  const fakeUsers = await prisma.$transaction(
+    fakeNames.map((name, i) =>
+      prisma.user.create({
+        data: {
+          email: `${name.toLowerCase()}@giftpull.fake`,
+          name,
+          pointsBalance: Math.floor(Math.random() * 5000) + 100,
+          usdcBalance: 0,
+          passwordHash,
+          lastLoginAt: daysAgo(Math.floor(Math.random() * 14)),
+          loginStreak: Math.floor(Math.random() * 30),
+        },
+      })
+    )
+  );
+  console.log(`Created ${fakeUsers.length} fake users.`);
+
+  // ─── Leaderboard Prizes ──────────────────────────────────
+
+  console.log('Creating leaderboard prizes...');
+
+  const prizeData = [
+    // Weekly prizes (top 25)
+    { period: LeaderboardPeriod.WEEKLY, rankMin: 1, rankMax: 1, prizeType: 'GIFT_CARD', prizeValue: 100, prizeLabel: '$100 Gift Card' },
+    { period: LeaderboardPeriod.WEEKLY, rankMin: 2, rankMax: 2, prizeType: 'GIFT_CARD', prizeValue: 50, prizeLabel: '$50 Gift Card' },
+    { period: LeaderboardPeriod.WEEKLY, rankMin: 3, rankMax: 3, prizeType: 'GIFT_CARD', prizeValue: 25, prizeLabel: '$25 Gift Card' },
+    { period: LeaderboardPeriod.WEEKLY, rankMin: 4, rankMax: 5, prizeType: 'POINTS', prizeValue: 5000, prizeLabel: '5,000 Points' },
+    { period: LeaderboardPeriod.WEEKLY, rankMin: 6, rankMax: 10, prizeType: 'POINTS', prizeValue: 2500, prizeLabel: '2,500 Points' },
+    { period: LeaderboardPeriod.WEEKLY, rankMin: 11, rankMax: 25, prizeType: 'POINTS', prizeValue: 1000, prizeLabel: '1,000 Points' },
+    // Monthly prizes (top 50)
+    { period: LeaderboardPeriod.MONTHLY, rankMin: 1, rankMax: 1, prizeType: 'GIFT_CARD', prizeValue: 500, prizeLabel: '$500 Gift Card' },
+    { period: LeaderboardPeriod.MONTHLY, rankMin: 2, rankMax: 2, prizeType: 'GIFT_CARD', prizeValue: 250, prizeLabel: '$250 Gift Card' },
+    { period: LeaderboardPeriod.MONTHLY, rankMin: 3, rankMax: 3, prizeType: 'GIFT_CARD', prizeValue: 100, prizeLabel: '$100 Gift Card' },
+    { period: LeaderboardPeriod.MONTHLY, rankMin: 4, rankMax: 5, prizeType: 'GIFT_CARD', prizeValue: 50, prizeLabel: '$50 Gift Card' },
+    { period: LeaderboardPeriod.MONTHLY, rankMin: 6, rankMax: 10, prizeType: 'POINTS', prizeValue: 10000, prizeLabel: '10,000 Points' },
+    { period: LeaderboardPeriod.MONTHLY, rankMin: 11, rankMax: 25, prizeType: 'POINTS', prizeValue: 5000, prizeLabel: '5,000 Points' },
+    { period: LeaderboardPeriod.MONTHLY, rankMin: 26, rankMax: 50, prizeType: 'POINTS', prizeValue: 2000, prizeLabel: '2,000 Points' },
+  ];
+
+  await prisma.$transaction(
+    prizeData.map((p) => prisma.leaderboardPrize.create({ data: p }))
+  );
+  console.log(`Created ${prizeData.length} leaderboard prizes.`);
+
+  // ─── Sample Leaderboard Entries ─────────────────────────
+
+  console.log('Creating sample leaderboard entries...');
+
+  const now = new Date();
+  // Get current week bounds (Mon-Sun)
+  const weekDay = now.getUTCDay();
+  const weekDiff = weekDay === 0 ? -6 : 1 - weekDay;
+  const weekStart = new Date(now);
+  weekStart.setUTCDate(weekStart.getUTCDate() + weekDiff);
+  weekStart.setUTCHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  weekEnd.setUTCHours(23, 59, 59, 999);
+
+  // Get current month bounds
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+
+  // All users who might have leaderboard entries
+  const allLeaderboardUsers = [admin, alice, bob, ...fakeUsers];
+
+  // Create weekly entries for all users with varying points
+  const weeklyEntries = allLeaderboardUsers.map((u, i) => {
+    // Top users get more points, create a natural distribution
+    const basePoints = Math.max(50, Math.floor(8000 / (i + 1)) + Math.floor(Math.random() * 500));
+    return prisma.leaderboardEntry.create({
+      data: {
+        userId: u.id,
+        period: LeaderboardPeriod.WEEKLY,
+        periodStart: weekStart,
+        periodEnd: weekEnd,
+        pointsEarned: basePoints,
+      },
+    });
+  });
+
+  // Create monthly entries with higher cumulative points
+  const monthlyEntries = allLeaderboardUsers.map((u, i) => {
+    const basePoints = Math.max(200, Math.floor(35000 / (i + 1)) + Math.floor(Math.random() * 2000));
+    return prisma.leaderboardEntry.create({
+      data: {
+        userId: u.id,
+        period: LeaderboardPeriod.MONTHLY,
+        periodStart: monthStart,
+        periodEnd: monthEnd,
+        pointsEarned: basePoints,
+      },
+    });
+  });
+
+  await prisma.$transaction([...weeklyEntries, ...monthlyEntries]);
+  console.log(`Created ${weeklyEntries.length + monthlyEntries.length} leaderboard entries.`);
+
   // ─── Summary ────────────────────────────────────────────
 
   const totalCards = await prisma.giftCard.count();
@@ -727,9 +840,12 @@ async function main() {
   const totalPulls = await prisma.gachaPull.count();
   const totalListings = await prisma.p2PListing.count();
   const totalLedger = await prisma.pointsLedger.count();
+  const totalUsers = await prisma.user.count();
+  const totalLbEntries = await prisma.leaderboardEntry.count();
+  const totalLbPrizes = await prisma.leaderboardPrize.count();
 
   console.log('\n=== Seed Complete ===');
-  console.log(`Users:        3`);
+  console.log(`Users:        ${totalUsers}`);
   console.log(`Gift Cards:   ${totalCards}`);
   console.log(`Gacha Packs:  3`);
   console.log(`Gacha Odds:   ${oddsData.length}`);
@@ -738,6 +854,8 @@ async function main() {
   console.log(`Gacha Pulls:  ${totalPulls}`);
   console.log(`P2P Listings: ${totalListings}`);
   console.log(`Points Ledger:${totalLedger}`);
+  console.log(`LB Entries:   ${totalLbEntries}`);
+  console.log(`LB Prizes:    ${totalLbPrizes}`);
 }
 
 main()

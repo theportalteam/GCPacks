@@ -13,6 +13,7 @@ import {
   User,
   LogOut,
   Shield,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPoints, formatCurrency } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navLinks: NavLink[] = [
   { href: "/storefront", label: "Storefront" },
   { href: "/gacha", label: "Gacha Packs" },
   { href: "/marketplace", label: "Marketplace" },
+  { href: "/leaderboard", label: "Leaderboard" },
 ];
 
 export function Navbar() {
@@ -80,12 +82,15 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
                   isActive(link.href)
                     ? "bg-primary/15 text-primary"
                     : "text-text-secondary hover:text-text-primary hover:bg-bg-elevated"
                 )}
               >
+                {link.href === "/leaderboard" && (
+                  <Trophy className="w-3.5 h-3.5 text-warning" />
+                )}
                 {link.label}
               </Link>
             ))}

@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { PointsType } from "@prisma/client";
+import { recordPointsForLeaderboard } from "@/lib/leaderboard";
 
 interface EarnPointsParams {
   userId: string;
@@ -55,6 +56,11 @@ export async function earnPoints({
 
     return { ledgerEntryId: ledgerEntry.id, finalAmount };
   });
+
+  // Record for leaderboard (fire-and-forget, don't block the main flow)
+  recordPointsForLeaderboard(userId, result.finalAmount).catch((err) =>
+    console.error("Leaderboard tracking error:", err)
+  );
 
   return result;
 }

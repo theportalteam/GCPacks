@@ -62,10 +62,10 @@ export async function POST(request: NextRequest) {
       }
 
       // ── Gacha pack purchase (Phase 3) ─────────────────────
-      else if (type === "gacha_pack" && metadata.packId) {
+      else if (type === "gacha_pull" && metadata.packTier) {
         // Will be implemented in Phase 3
         console.log(
-          `Gacha pack purchase webhook received: packId=${metadata.packId}, userId=${userId}`
+          `Gacha pack purchase webhook received: packTier=${metadata.packTier}, userId=${userId}`
         );
       }
     }

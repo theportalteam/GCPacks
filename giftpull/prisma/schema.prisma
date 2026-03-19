@@ -39,10 +39,9 @@ enum GiftCardSource {
 }
 
 enum PackTier {
-  STARTER
-  STANDARD
-  PREMIUM
-  ULTRA
+  COMMON
+  RARE
+  EPIC
 }
 
 enum RarityTier {
@@ -145,6 +144,7 @@ model User {
   sellerListings  P2PListing[]   @relation("Seller")
   buyerListings   P2PListing[]   @relation("Buyer")
   pullHistory     GachaPull[]
+  packUnlocks     UserPackUnlock[]
   accounts        Account[]
   sessions        Session[]
 }
@@ -247,6 +247,16 @@ model GachaPull {
   wasBoughtBack Boolean    @default(false)
   randomSeed    String?
   createdAt     DateTime   @default(now())
+}
+
+model UserPackUnlock {
+  id         String   @id @default(cuid())
+  userId     String
+  packTier   PackTier
+  unlockedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, packTier])
 }
 
 model Transaction {

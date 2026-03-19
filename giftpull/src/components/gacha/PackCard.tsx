@@ -2,69 +2,67 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Lock, Sparkles } from "lucide-react";
+import { ChevronDown, Lock, Sparkles, Unlock } from "lucide-react";
 import { cn, formatCurrency, formatPoints, getRarityColor } from "@/lib/utils";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
 interface PackOddsEntry {
-  rarity: string;
-  percentage: number;
-  minValue: number;
-  maxValue: number;
+  rarityTier: string;
+  cardValue: number;
+  weight: number;
 }
 
 interface PackData {
   id: string;
   name: string;
-  tier: "STARTER" | "STANDARD" | "PREMIUM" | "ULTRA";
+  tier: "COMMON" | "RARE" | "EPIC";
   price: number;
   pointsCost: number;
   odds: PackOddsEntry[];
   expectedValue: number;
-  pullsToday: number;
-  maxPullsPerDay: number;
+  pullsToday?: number;
+  pullsRemaining?: number;
+  dailyLimit?: number;
+  ccUnlocked?: boolean;
 }
 
 interface PackCardProps {
   pack: PackData;
   authenticated: boolean;
-  onPull: (packId: string) => void;
+  onPull: (packTier: string) => void;
 }
 
 const tierConfig: Record<
   PackData["tier"],
   { badge: string; color: string; glowColor: string; gradient?: string }
 > = {
-  STARTER: {
+  COMMON: {
     badge: "success",
     color: "#10B981",
     glowColor: "rgba(16, 185, 129, 0.3)",
   },
-  STANDARD: {
+  RARE: {
     badge: "brand",
     color: "#3B82F6",
     glowColor: "rgba(59, 130, 246, 0.3)",
   },
-  PREMIUM: {
+  EPIC: {
     badge: "epic",
     color: "#8B5CF6",
     glowColor: "rgba(139, 92, 246, 0.3)",
-  },
-  ULTRA: {
-    badge: "legendary",
-    color: "#F59E0B",
-    glowColor: "rgba(245, 158, 11, 0.3)",
-    gradient: "linear-gradient(135deg, #F59E0B, #EF4444)",
+    gradient: "linear-gradient(135deg, #8B5CF6, #EC4899)",
   },
 };
 
 export function PackCard({ pack, authenticated, onPull }: PackCardProps) {
   const [showOdds, setShowOdds] = useState(false);
   const config = tierConfig[pack.tier];
-  const pullsRemaining = pack.maxPullsPerDay - pack.pullsToday;
+  const dailyLimit = pack.dailyLimit || 5;
+  const pullsRemaining = pack.pullsRemaining ?? (dailyLimit - (pack.pullsToday || 0));
   const canPull = authenticated && pullsRemaining > 0;
+  const ccUnlocked = pack.ccUnlocked ?? false;
 
   return (
     <motion.div
@@ -132,6 +130,30 @@ export function PackCard({ pack, authenticated, onPull }: PackCardProps) {
             </p>
           </div>
 
+          {/* CC Lock indicator */}
+          {authenticated && (
+            <div
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-lg mb-4 text-xs font-medium",
+                ccUnlocked
+                  ? "bg-success/10 text-success border border-success/20"
+                  : "bg-warning/10 text-warning border border-warning/20"
+              )}
+            >
+              {ccUnlocked ? (
+                <>
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>CC Unlocked</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Pull with points to unlock CC</span>
+                </>
+              )}
+            </div>
+          )}
+
           {/* View Odds expandable */}
           <button
             onClick={() => setShowOdds(!showOdds)}
@@ -158,30 +180,29 @@ export function PackCard({ pack, authenticated, onPull }: PackCardProps) {
                 <div className="bg-bg-elevated/40 border border-bg-border rounded-xl p-3 space-y-2">
                   {pack.odds.map((entry) => (
                     <div
-                      key={entry.rarity}
+                      key={entry.rarityTier}
                       className="flex items-center justify-between text-sm"
                     >
                       <div className="flex items-center gap-2">
                         <span
                           className="w-2.5 h-2.5 rounded-full shrink-0"
                           style={{
-                            backgroundColor: getRarityColor(entry.rarity),
+                            backgroundColor: getRarityColor(entry.rarityTier),
                           }}
                         />
                         <span className="text-text-primary font-medium">
-                          {entry.rarity}
+                          {entry.rarityTier}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-text-secondary text-xs">
-                          {formatCurrency(entry.minValue)} -{" "}
-                          {formatCurrency(entry.maxValue)}
+                          {formatCurrency(entry.cardValue)}
                         </span>
                         <span
                           className="font-bold tabular-nums min-w-[3rem] text-right"
-                          style={{ color: getRarityColor(entry.rarity) }}
+                          style={{ color: getRarityColor(entry.rarityTier) }}
                         >
-                          {entry.percentage}%
+                          {(entry.weight * 100).toFixed(1)}%
                         </span>
                       </div>
                     </div>
@@ -194,7 +215,7 @@ export function PackCard({ pack, authenticated, onPull }: PackCardProps) {
           {/* Daily pulls counter */}
           <div className="flex items-center justify-center gap-1.5 mb-5">
             <div className="flex gap-1">
-              {Array.from({ length: pack.maxPullsPerDay }).map((_, i) => (
+              {Array.from({ length: Math.min(dailyLimit, 10) }).map((_, i) => (
                 <div
                   key={i}
                   className={cn(
@@ -205,9 +226,12 @@ export function PackCard({ pack, authenticated, onPull }: PackCardProps) {
                   )}
                 />
               ))}
+              {dailyLimit > 10 && (
+                <span className="text-xs text-text-secondary ml-1">...</span>
+              )}
             </div>
             <span className="text-xs text-text-secondary ml-1">
-              {pullsRemaining}/{pack.maxPullsPerDay} pulls today
+              {pullsRemaining}/{dailyLimit} today
             </span>
           </div>
 
@@ -237,7 +261,7 @@ export function PackCard({ pack, authenticated, onPull }: PackCardProps) {
                   boxShadow: `0 4px 20px ${config.glowColor}`,
                 }}
                 icon={<Sparkles className="w-5 h-5" />}
-                onClick={() => onPull(pack.id)}
+                onClick={() => onPull(pack.tier)}
               >
                 PULL
               </Button>

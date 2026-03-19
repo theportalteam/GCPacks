@@ -4,100 +4,91 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Dice5, LogIn, Sparkles, TrendingUp, Wallet } from "lucide-react";
+import { Dice5, LogIn, Sparkles, TrendingUp, Wallet, Lock, Unlock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PackCard } from "@/components/gacha/PackCard";
 
 interface PackOddsEntry {
-  rarity: string;
-  percentage: number;
-  minValue: number;
-  maxValue: number;
+  rarityTier: string;
+  cardValue: number;
+  weight: number;
 }
 
 interface PackData {
   id: string;
   name: string;
-  tier: "STARTER" | "STANDARD" | "PREMIUM" | "ULTRA";
+  tier: "COMMON" | "RARE" | "EPIC";
   price: number;
   pointsCost: number;
   odds: PackOddsEntry[];
   expectedValue: number;
   pullsToday: number;
-  maxPullsPerDay: number;
+  pullsRemaining: number;
+  dailyLimit: number;
+  ccUnlocked: boolean;
+  poolStats?: { totalCards: number; cardsByRarity: Record<string, number> };
 }
 
 // Fallback mock data for development
 const MOCK_PACKS: PackData[] = [
   {
-    id: "starter",
-    name: "Starter Pack",
-    tier: "STARTER",
-    price: 5,
-    pointsCost: 400,
+    id: "common",
+    name: "Common Pack",
+    tier: "COMMON",
+    price: 10,
+    pointsCost: 800,
     odds: [
-      { rarity: "COMMON", percentage: 60, minValue: 3, maxValue: 5 },
-      { rarity: "UNCOMMON", percentage: 25, minValue: 5, maxValue: 10 },
-      { rarity: "RARE", percentage: 12, minValue: 10, maxValue: 15 },
-      { rarity: "EPIC", percentage: 2.5, minValue: 15, maxValue: 25 },
-      { rarity: "LEGENDARY", percentage: 0.5, minValue: 25, maxValue: 50 },
+      { rarityTier: "COMMON", cardValue: 5, weight: 0.60 },
+      { rarityTier: "UNCOMMON", cardValue: 10, weight: 0.25 },
+      { rarityTier: "RARE", cardValue: 15, weight: 0.10 },
+      { rarityTier: "EPIC", cardValue: 25, weight: 0.04 },
+      { rarityTier: "LEGENDARY", cardValue: 50, weight: 0.01 },
     ],
-    expectedValue: 5.75,
+    expectedValue: 10.70,
     pullsToday: 0,
-    maxPullsPerDay: 10,
+    pullsRemaining: 20,
+    dailyLimit: 20,
+    ccUnlocked: false,
   },
   {
-    id: "standard",
-    name: "Standard Pack",
-    tier: "STANDARD",
-    price: 15,
-    pointsCost: 1200,
+    id: "rare",
+    name: "Rare Pack",
+    tier: "RARE",
+    price: 25,
+    pointsCost: 2000,
     odds: [
-      { rarity: "COMMON", percentage: 45, minValue: 10, maxValue: 15 },
-      { rarity: "UNCOMMON", percentage: 30, minValue: 15, maxValue: 20 },
-      { rarity: "RARE", percentage: 17, minValue: 20, maxValue: 30 },
-      { rarity: "EPIC", percentage: 6, minValue: 30, maxValue: 50 },
-      { rarity: "LEGENDARY", percentage: 2, minValue: 50, maxValue: 100 },
+      { rarityTier: "COMMON", cardValue: 10, weight: 0.40 },
+      { rarityTier: "UNCOMMON", cardValue: 15, weight: 0.30 },
+      { rarityTier: "RARE", cardValue: 25, weight: 0.18 },
+      { rarityTier: "EPIC", cardValue: 50, weight: 0.09 },
+      { rarityTier: "LEGENDARY", cardValue: 100, weight: 0.03 },
     ],
-    expectedValue: 16.05,
-    pullsToday: 2,
-    maxPullsPerDay: 5,
-  },
-  {
-    id: "premium",
-    name: "Premium Pack",
-    tier: "PREMIUM",
-    price: 35,
-    pointsCost: 2800,
-    odds: [
-      { rarity: "COMMON", percentage: 30, minValue: 20, maxValue: 30 },
-      { rarity: "UNCOMMON", percentage: 30, minValue: 30, maxValue: 40 },
-      { rarity: "RARE", percentage: 25, minValue: 40, maxValue: 60 },
-      { rarity: "EPIC", percentage: 10, minValue: 60, maxValue: 100 },
-      { rarity: "LEGENDARY", percentage: 5, minValue: 100, maxValue: 200 },
-    ],
-    expectedValue: 39.5,
+    expectedValue: 27.50,
     pullsToday: 0,
-    maxPullsPerDay: 3,
+    pullsRemaining: 10,
+    dailyLimit: 10,
+    ccUnlocked: false,
   },
   {
-    id: "ultra",
-    name: "Ultra Pack",
-    tier: "ULTRA",
+    id: "epic",
+    name: "Epic Pack",
+    tier: "EPIC",
     price: 75,
     pointsCost: 6000,
     odds: [
-      { rarity: "COMMON", percentage: 15, minValue: 50, maxValue: 60 },
-      { rarity: "UNCOMMON", percentage: 25, minValue: 60, maxValue: 80 },
-      { rarity: "RARE", percentage: 30, minValue: 80, maxValue: 120 },
-      { rarity: "EPIC", percentage: 20, minValue: 120, maxValue: 200 },
-      { rarity: "LEGENDARY", percentage: 10, minValue: 200, maxValue: 500 },
+      { rarityTier: "COMMON", cardValue: 25, weight: 0.20 },
+      { rarityTier: "UNCOMMON", cardValue: 50, weight: 0.25 },
+      { rarityTier: "RARE", cardValue: 75, weight: 0.25 },
+      { rarityTier: "EPIC", cardValue: 100, weight: 0.20 },
+      { rarityTier: "LEGENDARY", cardValue: 200, weight: 0.10 },
     ],
-    expectedValue: 89.0,
+    expectedValue: 86.25,
     pullsToday: 0,
-    maxPullsPerDay: 2,
+    pullsRemaining: 5,
+    dailyLimit: 5,
+    ccUnlocked: false,
   },
 ];
 
@@ -210,8 +201,8 @@ export default function GachaPage() {
   }, []);
 
   const handlePull = useCallback(
-    (packId: string) => {
-      router.push(`/gacha/pull/${packId}`);
+    (packTier: string) => {
+      router.push(`/gacha/${packTier.toLowerCase()}`);
     },
     [router]
   );
@@ -224,7 +215,7 @@ export default function GachaPage() {
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-warning/5 rounded-full blur-3xl pointer-events-none" />
       <BackgroundParticles />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-20">
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-10 pb-20">
         {/* Header */}
         <motion.div
           className="text-center mb-12"
@@ -237,7 +228,7 @@ export default function GachaPage() {
               <Dice5 className="w-6 h-6 text-epic" />
             </div>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-text-primary">
-              Gacha Packs
+              GiftPull
             </h1>
           </div>
 
@@ -279,10 +270,10 @@ export default function GachaPage() {
           </motion.div>
         )}
 
-        {/* Pack grid */}
+        {/* Pack grid — 3 large cards */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 4 }).map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -305,7 +296,7 @@ export default function GachaPage() {
             </Button>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {packs.map((pack, i) => (
               <motion.div
                 key={pack.id}

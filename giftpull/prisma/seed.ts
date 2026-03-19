@@ -44,18 +44,12 @@ const ALL_BRANDS: GiftCardBrand[] = [
   GiftCardBrand.NETFLIX,
 ];
 
-const DENOMINATIONS = [5, 10, 15, 25, 50, 100];
-
 function rarityForDenomination(denom: number): RarityTier {
-  switch (denom) {
-    case 5: return RarityTier.COMMON;
-    case 10: return RarityTier.UNCOMMON;
-    case 15: return RarityTier.UNCOMMON;
-    case 25: return RarityTier.RARE;
-    case 50: return RarityTier.EPIC;
-    case 100: return RarityTier.LEGENDARY;
-    default: return RarityTier.COMMON;
-  }
+  if (denom <= 5) return RarityTier.COMMON;
+  if (denom <= 10) return RarityTier.UNCOMMON;
+  if (denom <= 25) return RarityTier.RARE;
+  if (denom <= 50) return RarityTier.EPIC;
+  return RarityTier.LEGENDARY;
 }
 
 // ─── Main ─────────────────────────────────────────────────
@@ -64,6 +58,7 @@ async function main() {
   console.log('Clearing existing data...');
 
   // Delete in FK-safe order (children first)
+  await prisma.userPackUnlock.deleteMany();
   await prisma.gachaPull.deleteMany();
   await prisma.gachaOdds.deleteMany();
   await prisma.pointsLedger.deleteMany();
@@ -127,7 +122,7 @@ async function main() {
   });
   console.log(`Created user: ${bob.email}`);
 
-  // ─── Gift Cards (100+) ─────────────────────────────────
+  // ─── Gift Cards (200+) ─────────────────────────────────
 
   console.log('Creating gift cards...');
 
@@ -146,44 +141,117 @@ async function main() {
 
   const cardRecords: CardSeedData[] = [];
 
-  // We need ~70 AVAILABLE, ~15 RESERVED, ~10 SOLD, ~5 BUYBACK = 100 cards
-  // Distribute evenly across brands: 10 brands x 10 cards each = 100, plus a few extra
+  // COMMON pack denominations: $5, $10 (EV ~$10.70 at $10 price)
+  // RARE pack denominations: $10, $15, $25, $50 (EV ~$27.50 at $25 price)
+  // EPIC pack denominations: $25, $50, $75, $100 (EV ~$86.25 at $75 price)
 
-  // -- 70 AVAILABLE cards (7 per brand) --
-  for (const brand of ALL_BRANDS) {
-    for (let i = 0; i < 7; i++) {
-      const denom = DENOMINATIONS[i % DENOMINATIONS.length];
-      const discount = i % 3 === 0 ? randomFloat(5, 15, 0) : null; // ~1/3 have discount
-      cardRecords.push({
-        brand,
-        denomination: denom,
-        code: randomCode(),
-        status: GiftCardStatus.AVAILABLE,
-        source: GiftCardSource.BULK_IMPORT,
-        fmv: denom,
-        rarityTier: rarityForDenomination(denom),
-        currentOwnerId: null,
-        listedPrice: discount ? parseFloat((denom * (1 - discount / 100)).toFixed(2)) : null,
-        discountPercent: discount,
-      });
-    }
+  // -- AVAILABLE cards for COMMON tier ($5, $10) -- 40 cards
+  const commonDenoms = [5, 10];
+  for (let i = 0; i < 40; i++) {
+    const brand = ALL_BRANDS[i % ALL_BRANDS.length];
+    const denom = commonDenoms[i % commonDenoms.length];
+    const discount = i % 5 === 0 ? randomFloat(5, 12, 0) : null;
+    cardRecords.push({
+      brand,
+      denomination: denom,
+      code: randomCode(),
+      status: GiftCardStatus.AVAILABLE,
+      source: GiftCardSource.BULK_IMPORT,
+      fmv: denom,
+      rarityTier: rarityForDenomination(denom),
+      currentOwnerId: null,
+      listedPrice: discount ? parseFloat((denom * (1 - discount / 100)).toFixed(2)) : null,
+      discountPercent: discount,
+    });
   }
 
-  // -- 15 RESERVED cards (mixed between alice and bob) --
-  const reservedBrands: GiftCardBrand[] = [
-    GiftCardBrand.STEAM, GiftCardBrand.XBOX, GiftCardBrand.PLAYSTATION,
-    GiftCardBrand.NINTENDO, GiftCardBrand.AMAZON, GiftCardBrand.APPLE,
-    GiftCardBrand.ROBLOX, GiftCardBrand.GOOGLE_PLAY, GiftCardBrand.SPOTIFY,
-    GiftCardBrand.NETFLIX, GiftCardBrand.STEAM, GiftCardBrand.XBOX,
-    GiftCardBrand.PLAYSTATION, GiftCardBrand.NINTENDO, GiftCardBrand.AMAZON,
-  ];
-  for (let i = 0; i < 15; i++) {
-    const denom = DENOMINATIONS[i % DENOMINATIONS.length];
+  // -- AVAILABLE cards for RARE tier ($10, $15, $25, $50) -- 60 cards
+  const rareDenoms = [10, 15, 25, 50];
+  for (let i = 0; i < 60; i++) {
+    const brand = ALL_BRANDS[i % ALL_BRANDS.length];
+    const denom = rareDenoms[i % rareDenoms.length];
+    const discount = i % 4 === 0 ? randomFloat(5, 15, 0) : null;
     cardRecords.push({
-      brand: reservedBrands[i],
+      brand,
+      denomination: denom,
+      code: randomCode(),
+      status: GiftCardStatus.AVAILABLE,
+      source: GiftCardSource.BULK_IMPORT,
+      fmv: denom,
+      rarityTier: rarityForDenomination(denom),
+      currentOwnerId: null,
+      listedPrice: discount ? parseFloat((denom * (1 - discount / 100)).toFixed(2)) : null,
+      discountPercent: discount,
+    });
+  }
+
+  // -- AVAILABLE cards for EPIC tier ($25, $50, $75, $100) -- 50 cards
+  const epicDenoms = [25, 50, 75, 100];
+  for (let i = 0; i < 50; i++) {
+    const brand = ALL_BRANDS[i % ALL_BRANDS.length];
+    const denom = epicDenoms[i % epicDenoms.length];
+    const discount = i % 4 === 0 ? randomFloat(5, 15, 0) : null;
+    cardRecords.push({
+      brand,
+      denomination: denom,
+      code: randomCode(),
+      status: GiftCardStatus.AVAILABLE,
+      source: GiftCardSource.BULK_IMPORT,
+      fmv: denom,
+      rarityTier: rarityForDenomination(denom),
+      currentOwnerId: null,
+      listedPrice: discount ? parseFloat((denom * (1 - discount / 100)).toFixed(2)) : null,
+      discountPercent: discount,
+    });
+  }
+
+  // -- Extra high-value AVAILABLE cards for legendary pulls -- 20 cards
+  const highDenoms = [50, 75, 100];
+  for (let i = 0; i < 20; i++) {
+    const brand = ALL_BRANDS[i % ALL_BRANDS.length];
+    const denom = highDenoms[i % highDenoms.length];
+    cardRecords.push({
+      brand,
+      denomination: denom,
+      code: randomCode(),
+      status: GiftCardStatus.AVAILABLE,
+      source: GiftCardSource.BULK_IMPORT,
+      fmv: denom,
+      rarityTier: rarityForDenomination(denom),
+      currentOwnerId: null,
+      listedPrice: null,
+      discountPercent: null,
+    });
+  }
+
+  // -- 20 RESERVED cards (mixed between alice and bob) --
+  const allDenoms = [5, 10, 15, 25, 50, 100];
+  for (let i = 0; i < 20; i++) {
+    const brand = ALL_BRANDS[i % ALL_BRANDS.length];
+    const denom = allDenoms[i % allDenoms.length];
+    cardRecords.push({
+      brand,
       denomination: denom,
       code: randomCode(),
       status: GiftCardStatus.RESERVED,
+      source: GiftCardSource.BULK_IMPORT,
+      fmv: denom,
+      rarityTier: rarityForDenomination(denom),
+      currentOwnerId: i < 14 ? alice.id : bob.id,
+      listedPrice: null,
+      discountPercent: null,
+    });
+  }
+
+  // -- 15 SOLD cards --
+  for (let i = 0; i < 15; i++) {
+    const brand = ALL_BRANDS[i % ALL_BRANDS.length];
+    const denom = allDenoms[i % allDenoms.length];
+    cardRecords.push({
+      brand,
+      denomination: denom,
+      code: randomCode(),
+      status: GiftCardStatus.SOLD,
       source: GiftCardSource.BULK_IMPORT,
       fmv: denom,
       rarityTier: rarityForDenomination(denom),
@@ -193,38 +261,12 @@ async function main() {
     });
   }
 
-  // -- 10 SOLD cards --
-  const soldBrands: GiftCardBrand[] = [
-    GiftCardBrand.STEAM, GiftCardBrand.XBOX, GiftCardBrand.AMAZON,
-    GiftCardBrand.PLAYSTATION, GiftCardBrand.APPLE, GiftCardBrand.ROBLOX,
-    GiftCardBrand.NETFLIX, GiftCardBrand.SPOTIFY, GiftCardBrand.GOOGLE_PLAY,
-    GiftCardBrand.NINTENDO,
-  ];
+  // -- 10 BUYBACK cards --
   for (let i = 0; i < 10; i++) {
-    const denom = DENOMINATIONS[i % DENOMINATIONS.length];
+    const brand = ALL_BRANDS[i % ALL_BRANDS.length];
+    const denom = allDenoms[i % allDenoms.length];
     cardRecords.push({
-      brand: soldBrands[i],
-      denomination: denom,
-      code: randomCode(),
-      status: GiftCardStatus.SOLD,
-      source: GiftCardSource.BULK_IMPORT,
-      fmv: denom,
-      rarityTier: rarityForDenomination(denom),
-      currentOwnerId: i < 7 ? alice.id : bob.id,
-      listedPrice: null,
-      discountPercent: null,
-    });
-  }
-
-  // -- 5 BUYBACK cards --
-  const buybackBrands: GiftCardBrand[] = [
-    GiftCardBrand.STEAM, GiftCardBrand.XBOX, GiftCardBrand.AMAZON,
-    GiftCardBrand.PLAYSTATION, GiftCardBrand.ROBLOX,
-  ];
-  for (let i = 0; i < 5; i++) {
-    const denom = DENOMINATIONS[i % DENOMINATIONS.length];
-    cardRecords.push({
-      brand: buybackBrands[i],
+      brand,
       denomination: denom,
       code: randomCode(),
       status: GiftCardStatus.BUYBACK,
@@ -261,92 +303,77 @@ async function main() {
   console.log(`Created ${createdCards.length} gift cards.`);
 
   // Partition cards by status for referencing later
-  const availableCards = createdCards.filter((_, i) => cardRecords[i].status === GiftCardStatus.AVAILABLE);
   const reservedCards = createdCards.filter((_, i) => cardRecords[i].status === GiftCardStatus.RESERVED);
   const soldCards = createdCards.filter((_, i) => cardRecords[i].status === GiftCardStatus.SOLD);
 
-  // ─── Gacha Packs ────────────────────────────────────────
+  // ─── Gacha Packs (3 tiers) ────────────────────────────
 
   console.log('Creating gacha packs...');
 
-  const starterPack = await prisma.gachaPack.create({
+  const commonPack = await prisma.gachaPack.create({
     data: {
-      tier: PackTier.STARTER,
-      name: 'Starter Pack',
-      description: 'A budget-friendly pack with a chance at uncommon and rare cards.',
-      price: 5,
-      pointsCost: 400,
+      tier: PackTier.COMMON,
+      name: 'Common Pack',
+      description: 'An affordable entry pack with a chance at rare and epic cards.',
+      price: 10,
+      pointsCost: 800,
+      dailyLimit: 20,
+      isActive: true,
+    },
+  });
+
+  const rarePack = await prisma.gachaPack.create({
+    data: {
+      tier: PackTier.RARE,
+      name: 'Rare Pack',
+      description: 'Mid-tier pack with improved odds for rare and epic gift cards.',
+      price: 25,
+      pointsCost: 2000,
       dailyLimit: 10,
       isActive: true,
     },
   });
 
-  const standardPack = await prisma.gachaPack.create({
+  const epicPack = await prisma.gachaPack.create({
     data: {
-      tier: PackTier.STANDARD,
-      name: 'Standard Pack',
-      description: 'The most popular pack with balanced odds and a shot at epic rewards.',
-      price: 15,
-      pointsCost: 1200,
+      tier: PackTier.EPIC,
+      name: 'Epic Pack',
+      description: 'The ultimate pack with the best odds for legendary gift cards.',
+      price: 75,
+      pointsCost: 6000,
       dailyLimit: 5,
       isActive: true,
     },
   });
 
-  const premiumPack = await prisma.gachaPack.create({
-    data: {
-      tier: PackTier.PREMIUM,
-      name: 'Premium Pack',
-      description: 'High-value pack with better odds for rare and epic gift cards.',
-      price: 50,
-      pointsCost: 4000,
-      dailyLimit: 3,
-      isActive: true,
-    },
-  });
-
-  const ultraPack = await prisma.gachaPack.create({
-    data: {
-      tier: PackTier.ULTRA,
-      name: 'Ultra Pack',
-      description: 'The ultimate pack with the best odds for legendary gift cards.',
-      price: 100,
-      pointsCost: 8000,
-      dailyLimit: 1,
-      isActive: true,
-    },
-  });
-
-  console.log('Created 4 gacha packs.');
+  console.log('Created 3 gacha packs.');
 
   // ─── Gacha Odds ─────────────────────────────────────────
+  // COMMON: $10 price, EV = +7% → ~$10.70
+  // RARE:   $25 price, EV = +10% → ~$27.50
+  // EPIC:   $75 price, EV = +15% → ~$86.25
 
   console.log('Creating gacha odds...');
 
   const oddsData = [
-    // Starter ($5)
-    { packId: starterPack.id, rarityTier: RarityTier.COMMON, cardValue: 3, weight: 0.50 },
-    { packId: starterPack.id, rarityTier: RarityTier.UNCOMMON, cardValue: 5, weight: 0.30 },
-    { packId: starterPack.id, rarityTier: RarityTier.RARE, cardValue: 10, weight: 0.15 },
-    { packId: starterPack.id, rarityTier: RarityTier.EPIC, cardValue: 15, weight: 0.05 },
-    // Standard ($15)
-    { packId: standardPack.id, rarityTier: RarityTier.COMMON, cardValue: 5, weight: 0.40 },
-    { packId: standardPack.id, rarityTier: RarityTier.UNCOMMON, cardValue: 10, weight: 0.30 },
-    { packId: standardPack.id, rarityTier: RarityTier.RARE, cardValue: 25, weight: 0.20 },
-    { packId: standardPack.id, rarityTier: RarityTier.EPIC, cardValue: 50, weight: 0.08 },
-    { packId: standardPack.id, rarityTier: RarityTier.LEGENDARY, cardValue: 100, weight: 0.02 },
-    // Premium ($50)
-    { packId: premiumPack.id, rarityTier: RarityTier.COMMON, cardValue: 25, weight: 0.35 },
-    { packId: premiumPack.id, rarityTier: RarityTier.UNCOMMON, cardValue: 50, weight: 0.30 },
-    { packId: premiumPack.id, rarityTier: RarityTier.RARE, cardValue: 75, weight: 0.20 },
-    { packId: premiumPack.id, rarityTier: RarityTier.EPIC, cardValue: 100, weight: 0.10 },
-    { packId: premiumPack.id, rarityTier: RarityTier.LEGENDARY, cardValue: 200, weight: 0.05 },
-    // Ultra ($100)
-    { packId: ultraPack.id, rarityTier: RarityTier.COMMON, cardValue: 50, weight: 0.30 },
-    { packId: ultraPack.id, rarityTier: RarityTier.UNCOMMON, cardValue: 75, weight: 0.30 },
-    { packId: ultraPack.id, rarityTier: RarityTier.RARE, cardValue: 100, weight: 0.20 },
-    { packId: ultraPack.id, rarityTier: RarityTier.EPIC, cardValue: 200, weight: 0.12 },
-    { packId: ultraPack.id, rarityTier: RarityTier.LEGENDARY, cardValue: 500, weight: 0.08 },
+    // Common ($10 price, EV ~$10.70)
+    { packId: commonPack.id, rarityTier: RarityTier.COMMON, cardValue: 5, weight: 0.60 },
+    { packId: commonPack.id, rarityTier: RarityTier.UNCOMMON, cardValue: 10, weight: 0.25 },
+    { packId: commonPack.id, rarityTier: RarityTier.RARE, cardValue: 15, weight: 0.10 },
+    { packId: commonPack.id, rarityTier: RarityTier.EPIC, cardValue: 25, weight: 0.04 },
+    { packId: commonPack.id, rarityTier: RarityTier.LEGENDARY, cardValue: 50, weight: 0.01 },
+    // Rare ($25 price, EV ~$27.50)
+    { packId: rarePack.id, rarityTier: RarityTier.COMMON, cardValue: 10, weight: 0.40 },
+    { packId: rarePack.id, rarityTier: RarityTier.UNCOMMON, cardValue: 15, weight: 0.30 },
+    { packId: rarePack.id, rarityTier: RarityTier.RARE, cardValue: 25, weight: 0.18 },
+    { packId: rarePack.id, rarityTier: RarityTier.EPIC, cardValue: 50, weight: 0.09 },
+    { packId: rarePack.id, rarityTier: RarityTier.LEGENDARY, cardValue: 100, weight: 0.03 },
+    // Epic ($75 price, EV ~$86.25)
+    { packId: epicPack.id, rarityTier: RarityTier.COMMON, cardValue: 25, weight: 0.20 },
+    { packId: epicPack.id, rarityTier: RarityTier.UNCOMMON, cardValue: 50, weight: 0.25 },
+    { packId: epicPack.id, rarityTier: RarityTier.RARE, cardValue: 75, weight: 0.25 },
+    { packId: epicPack.id, rarityTier: RarityTier.EPIC, cardValue: 100, weight: 0.20 },
+    { packId: epicPack.id, rarityTier: RarityTier.LEGENDARY, cardValue: 200, weight: 0.10 },
   ];
 
   await prisma.$transaction(
@@ -456,15 +483,15 @@ async function main() {
   console.log(`Created ${storefrontTxns.length} storefront transactions.`);
 
   // 7 GACHA_PULL transactions
-  const gachaPacks = [starterPack, standardPack, premiumPack, ultraPack];
+  const gachaPacks = [commonPack, rarePack, epicPack];
   const gachaTxData = [
-    { pack: starterPack, amount: 5 },
-    { pack: starterPack, amount: 5 },
-    { pack: standardPack, amount: 15 },
-    { pack: standardPack, amount: 15 },
-    { pack: premiumPack, amount: 50 },
-    { pack: premiumPack, amount: 50 },
-    { pack: ultraPack, amount: 100 },
+    { pack: commonPack, amount: 10 },
+    { pack: commonPack, amount: 10 },
+    { pack: rarePack, amount: 25 },
+    { pack: rarePack, amount: 25 },
+    { pack: epicPack, amount: 75 },
+    { pack: epicPack, amount: 75 },
+    { pack: epicPack, amount: 75 },
   ];
 
   const gachaTxns = await prisma.$transaction(
@@ -577,13 +604,13 @@ async function main() {
   console.log('Creating gacha pull records...');
 
   const pullData = [
-    { pack: starterPack, rarity: RarityTier.COMMON, value: 3, buyback: 2.40, cardIdx: 0, txIdx: 0 },
-    { pack: starterPack, rarity: RarityTier.UNCOMMON, value: 5, buyback: 4.00, cardIdx: 1, txIdx: 1 },
-    { pack: standardPack, rarity: RarityTier.RARE, value: 25, buyback: 20.00, cardIdx: 2, txIdx: 2 },
-    { pack: standardPack, rarity: RarityTier.COMMON, value: 5, buyback: 4.00, cardIdx: 3, txIdx: 3 },
-    { pack: premiumPack, rarity: RarityTier.EPIC, value: 100, buyback: 80.00, cardIdx: 4, txIdx: 4 },
-    { pack: premiumPack, rarity: RarityTier.UNCOMMON, value: 50, buyback: 40.00, cardIdx: 5, txIdx: 5 },
-    { pack: ultraPack, rarity: RarityTier.LEGENDARY, value: 500, buyback: 400.00, cardIdx: 6, txIdx: 6 },
+    { pack: commonPack, rarity: RarityTier.COMMON, value: 5, buyback: 4.75, cardIdx: 0, txIdx: 0 },
+    { pack: commonPack, rarity: RarityTier.UNCOMMON, value: 10, buyback: 9.50, cardIdx: 1, txIdx: 1 },
+    { pack: rarePack, rarity: RarityTier.RARE, value: 25, buyback: 23.75, cardIdx: 2, txIdx: 2 },
+    { pack: rarePack, rarity: RarityTier.COMMON, value: 10, buyback: 9.50, cardIdx: 3, txIdx: 3 },
+    { pack: epicPack, rarity: RarityTier.EPIC, value: 100, buyback: 95.00, cardIdx: 4, txIdx: 4 },
+    { pack: epicPack, rarity: RarityTier.UNCOMMON, value: 50, buyback: 47.50, cardIdx: 5, txIdx: 5 },
+    { pack: epicPack, rarity: RarityTier.LEGENDARY, value: 200, buyback: 190.00, cardIdx: 6, txIdx: 6 },
   ];
 
   const gachaPulls = await prisma.$transaction(
@@ -663,10 +690,10 @@ async function main() {
     { amount: 500, type: PointsType.PURCHASE_EARN, multiplier: 1.0, description: 'Earned from $50 Amazon card purchase', createdAt: daysAgo(21) },
     { amount: 150, type: PointsType.PURCHASE_EARN, multiplier: 1.0, description: 'Earned from $15 PlayStation card purchase', createdAt: daysAgo(18) },
     // GACHA_EARN entries
-    { amount: 25, type: PointsType.GACHA_EARN, multiplier: 1.0, description: 'Bonus from Starter Pack pull (Common)', createdAt: daysAgo(20) },
-    { amount: 50, type: PointsType.GACHA_EARN, multiplier: 1.0, description: 'Bonus from Starter Pack pull (Uncommon)', createdAt: daysAgo(18) },
-    { amount: 125, type: PointsType.GACHA_EARN, multiplier: 1.0, description: 'Bonus from Standard Pack pull (Rare)', createdAt: daysAgo(16) },
-    { amount: 250, type: PointsType.GACHA_EARN, multiplier: 1.5, description: 'Bonus from Premium Pack pull (Epic) + streak bonus', createdAt: daysAgo(12) },
+    { amount: 20, type: PointsType.GACHA_EARN, multiplier: 1.0, description: 'Bonus from Common Pack pull (Common)', createdAt: daysAgo(20) },
+    { amount: 20, type: PointsType.GACHA_EARN, multiplier: 1.0, description: 'Bonus from Common Pack pull (Uncommon)', createdAt: daysAgo(18) },
+    { amount: 50, type: PointsType.GACHA_EARN, multiplier: 1.0, description: 'Bonus from Rare Pack pull (Rare)', createdAt: daysAgo(16) },
+    { amount: 150, type: PointsType.GACHA_EARN, multiplier: 1.5, description: 'Bonus from Epic Pack pull (Epic) + streak bonus', createdAt: daysAgo(12) },
     // DAILY_LOGIN entries
     { amount: 50, type: PointsType.DAILY_LOGIN, multiplier: 1.0, description: 'Daily login bonus', createdAt: daysAgo(7) },
     { amount: 50, type: PointsType.DAILY_LOGIN, multiplier: 1.0, description: 'Daily login bonus', createdAt: daysAgo(6) },
@@ -704,7 +731,7 @@ async function main() {
   console.log('\n=== Seed Complete ===');
   console.log(`Users:        3`);
   console.log(`Gift Cards:   ${totalCards}`);
-  console.log(`Gacha Packs:  4`);
+  console.log(`Gacha Packs:  3`);
   console.log(`Gacha Odds:   ${oddsData.length}`);
   console.log(`Bundles:      3`);
   console.log(`Transactions: ${totalTxns}`);

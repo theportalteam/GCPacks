@@ -36,6 +36,7 @@ interface RevealScreenProps {
   onKeep: () => void;
   onBuyback: () => void;
   onPullAgain: () => void;
+  ccJustUnlocked?: boolean;
 }
 
 const rarityBadgeVariant: Record<string, string> = {
@@ -54,6 +55,7 @@ export function RevealScreen({
   onKeep,
   onBuyback,
   onPullAgain,
+  ccJustUnlocked = false,
 }: RevealScreenProps) {
   const [animatedPoints, setAnimatedPoints] = useState(0);
   const rarityColor = getRarityColor(card.rarity);
@@ -123,6 +125,29 @@ export function RevealScreen({
           </div>
         )}
       </div>
+
+      {/* CC Just Unlocked celebration */}
+      {ccJustUnlocked && (
+        <motion.div
+          className="mb-4"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.15, type: "spring", stiffness: 200 }}
+        >
+          <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-bold text-primary">
+                Credit Card Unlocked!
+              </span>
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
+            <p className="text-xs text-text-secondary">
+              You can now use Stripe for this pack tier
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Points earned */}
       <motion.div

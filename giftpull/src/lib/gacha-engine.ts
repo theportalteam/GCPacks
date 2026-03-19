@@ -2,7 +2,7 @@ import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { createCheckoutSession } from "@/lib/stripe";
 import { earnPoints, redeemPoints } from "@/lib/points";
-import type { PaymentMethod, RarityTier } from "@prisma/client";
+import type { PaymentMethod, PackTier, RarityTier } from "@prisma/client";
 
 // ─── TYPES ──────────────────────────────────────────────
 
@@ -12,6 +12,7 @@ export interface PullResult {
   buybackOffer: number;
   pointsEarned: number;
   pull: any;
+  ccJustUnlocked: boolean;
 }
 
 interface OddsEntry {
@@ -22,10 +23,23 @@ interface OddsEntry {
   weight: number;
 }
 
+// ─── CC UNLOCK CHECK ────────────────────────────────────
+
+export class CCLockedError extends Error {
+  constructor(tier: string) {
+    super(
+      `Complete your first pull with points to unlock credit card purchases for ${tier} packs`
+    );
+    this.name = "CCLockedError";
+  }
+}
+
 // ─── MAIN PULL FUNCTION ─────────────────────────────────
 
 /**
  * Execute a full gacha pull: validate, pay, roll rarity, assign card, record.
+ *
+ * Now accepts `packTier` instead of `packId`.
  *
  * For STRIPE payments this throws an object containing { checkoutUrl } so the
  * caller can redirect the user to Stripe Checkout.  The actual pull is
@@ -33,14 +47,14 @@ interface OddsEntry {
  */
 export async function executeGachaPull(
   userId: string,
-  packId: string,
+  packTier: PackTier,
   paymentMethod: PaymentMethod,
   origin?: string
 ): Promise<PullResult> {
   // ── 1. VALIDATE ──────────────────────────────────────
 
   const pack = await prisma.gachaPack.findUnique({
-    where: { id: packId },
+    where: { tier: packTier },
     include: { odds: true },
   });
 
@@ -56,12 +70,26 @@ export async function executeGachaPull(
     throw new Error("Pack has no configured odds");
   }
 
-  const todayPulls = await countTodayPulls(userId, packId);
+  const todayPulls = await countTodayPulls(userId, pack.id);
 
   if (todayPulls >= pack.dailyLimit) {
     throw new Error(
       `Daily limit reached (${pack.dailyLimit} pulls per day for this pack)`
     );
+  }
+
+  // ── 1b. CC UNLOCK GATE ─────────────────────────────
+
+  if (paymentMethod === "STRIPE") {
+    const unlock = await prisma.userPackUnlock.findUnique({
+      where: {
+        userId_packTier: { userId, packTier },
+      },
+    });
+
+    if (!unlock) {
+      throw new CCLockedError(packTier);
+    }
   }
 
   // ── 2. PROCESS PAYMENT ───────────────────────────────
@@ -74,7 +102,7 @@ export async function executeGachaPull(
       amount: pack.price,
       description: `${pack.name} - GiftPull Pack`,
       metadata: {
-        packId: pack.id,
+        packTier: pack.tier,
         userId,
         type: "gacha_pull",
       },
@@ -184,6 +212,19 @@ export async function executeGachaPull(
   const pointsMultiplier = paymentMethod === "USDC_BASE" ? 2.5 : 1;
   const pointsEarned = Math.floor(basePoints * pointsMultiplier);
 
+  // Check if this is the first points pull for this tier (CC unlock)
+  let ccJustUnlocked = false;
+  if (paymentMethod === "POINTS") {
+    const existingUnlock = await prisma.userPackUnlock.findUnique({
+      where: {
+        userId_packTier: { userId, packTier },
+      },
+    });
+    if (!existingUnlock) {
+      ccJustUnlocked = true;
+    }
+  }
+
   const result = await prisma.$transaction(async (tx) => {
     // Reserve card for the user
     const updatedCard = await tx.giftCard.update({
@@ -246,6 +287,16 @@ export async function executeGachaPull(
       });
     }
 
+    // Create CC unlock record if first points pull for this tier
+    if (ccJustUnlocked) {
+      await tx.userPackUnlock.create({
+        data: {
+          userId,
+          packTier,
+        },
+      });
+    }
+
     return { pull, card: updatedCard };
   });
 
@@ -257,6 +308,7 @@ export async function executeGachaPull(
     buybackOffer,
     pointsEarned: paymentMethod === "POINTS" ? 0 : pointsEarned,
     pull: result.pull,
+    ccJustUnlocked,
   };
 }
 

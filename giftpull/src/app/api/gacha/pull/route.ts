@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
-import { executeGachaPull } from "@/lib/gacha-engine";
-import type { PaymentMethod } from "@prisma/client";
+import { executeGachaPull, CCLockedError } from "@/lib/gacha-engine";
+import type { PaymentMethod, PackTier } from "@prisma/client";
 
 const VALID_PAYMENT_METHODS: PaymentMethod[] = [
   "STRIPE",
@@ -9,12 +9,14 @@ const VALID_PAYMENT_METHODS: PaymentMethod[] = [
   "POINTS",
 ];
 
+const VALID_PACK_TIERS: PackTier[] = ["COMMON", "RARE", "EPIC"];
+
 /**
  * POST /api/gacha/pull
  *
  * Execute a gacha pull.  Requires authentication.
  *
- * Body: { packId: string, paymentMethod: "STRIPE" | "USDC_BASE" | "POINTS" }
+ * Body: { packTier: "COMMON" | "RARE" | "EPIC", paymentMethod: "STRIPE" | "USDC_BASE" | "POINTS" }
  *
  * - For STRIPE: returns { checkoutUrl } (user must complete payment externally)
  * - For USDC / POINTS: returns the pull result immediately
@@ -29,13 +31,22 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id;
     const body = await request.json();
-    const { packId, paymentMethod } = body;
+    const { packTier, paymentMethod } = body;
 
     // ── Input validation ───────────────────────────────
 
-    if (!packId || !paymentMethod) {
+    if (!packTier || !paymentMethod) {
       return NextResponse.json(
-        { error: "packId and paymentMethod are required" },
+        { error: "packTier and paymentMethod are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!VALID_PACK_TIERS.includes(packTier as PackTier)) {
+      return NextResponse.json(
+        {
+          error: `Invalid packTier. Use one of: ${VALID_PACK_TIERS.join(", ")}`,
+        },
         { status: 400 }
       );
     }
@@ -58,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     const result = await executeGachaPull(
       userId,
-      packId,
+      packTier as PackTier,
       paymentMethod as PaymentMethod,
       origin
     );
@@ -76,12 +87,22 @@ export async function POST(request: NextRequest) {
       rarityTier: result.rarityTier,
       buybackOffer: result.buybackOffer,
       pointsEarned: result.pointsEarned,
+      ccJustUnlocked: result.ccJustUnlocked,
     });
   } catch (error: any) {
     // ── Stripe redirect (not a real error) ─────────────
 
     if (error && typeof error === "object" && "checkoutUrl" in error) {
       return NextResponse.json({ checkoutUrl: error.checkoutUrl });
+    }
+
+    // ── CC Locked error ──────────────────────────────────
+
+    if (error instanceof CCLockedError) {
+      return NextResponse.json(
+        { error: "CC_LOCKED", message: error.message },
+        { status: 403 }
+      );
     }
 
     // ── Known business errors ──────────────────────────

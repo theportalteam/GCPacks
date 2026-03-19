@@ -105,7 +105,7 @@ giftpull/
 │   │   │   └── [brand]/page.tsx # Filter by brand
 │   │   ├── gacha/
 │   │   │   ├── page.tsx       # Pack selection screen
-│   │   │   ├── pull/[packId]/page.tsx  # Pull animation + result
+│   │   │   ├── [packTier]/page.tsx     # Pack detail + pull flow
 │   │   │   └── history/page.tsx        # Pull history
 │   │   ├── marketplace/
 │   │   │   ├── page.tsx       # Browse P2P listings
@@ -263,10 +263,9 @@ enum GiftCardSource {
 }
 
 enum PackTier {
-  STARTER
-  STANDARD
-  PREMIUM
-  ULTRA
+  COMMON
+  RARE
+  EPIC
 }
 
 enum RarityTier {
@@ -474,6 +473,16 @@ model GachaPull {
   createdAt     DateTime    @default(now())
 }
 
+model UserPackUnlock {
+  id         String   @id @default(cuid())
+  userId     String
+  packTier   PackTier
+  unlockedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, packTier])
+}
+
 model Transaction {
   id                   String            @id @default(cuid())
   type                 TransactionType
@@ -565,51 +574,44 @@ Create `prisma/seed.ts` that populates the database with enough data to test all
 - Mix of statuses: ~70 AVAILABLE, ~15 RESERVED, ~10 SOLD, ~5 BUYBACK
 - Assign rarityTier to AVAILABLE cards based on denomination ($5=COMMON, $10=UNCOMMON, $25=RARE, $50=EPIC, $100=LEGENDARY)
 
-**Gacha packs (4 tiers):**
+**Gacha packs (3 tiers):**
 
-| Tier | Price | Points Cost | Daily Limit |
-|------|-------|-------------|-------------|
-| STARTER | $5 | 400 | 10 |
-| STANDARD | $15 | 1200 | 5 |
-| PREMIUM | $50 | 4000 | 3 |
-| ULTRA | $100 | 8000 | 1 |
+| Tier | Price | Points Cost | Daily Limit | EV |
+|------|-------|-------------|-------------|-----|
+| COMMON | $10 | 800 | 20 | +7% |
+| RARE | $25 | 2000 | 10 | +10% |
+| EPIC | $75 | 6000 | 5 | +15% |
 
-**Gacha odds (per pack — seed all 4):**
+**CC Unlock Gate:** First pull per tier MUST use points. After first points pull, credit card (Stripe) is unlocked for that tier. The `UserPackUnlock` model tracks which tiers each user has unlocked.
 
-Standard pack ($15) odds:
+**Gacha odds (per pack — seed all 3):**
+
+Common pack ($10) odds:
 | Rarity | Card Value | Weight |
 |--------|-----------|--------|
-| COMMON | $5 | 0.40 |
-| UNCOMMON | $10 | 0.30 |
-| RARE | $25 | 0.20 |
-| EPIC | $50 | 0.08 |
-| LEGENDARY | $100 | 0.02 |
+| COMMON | $5 | 0.60 |
+| UNCOMMON | $10 | 0.25 |
+| RARE | $15 | 0.10 |
+| EPIC | $25 | 0.04 |
+| LEGENDARY | $50 | 0.01 |
 
-Starter pack ($5) odds:
+Rare pack ($25) odds:
 | Rarity | Card Value | Weight |
 |--------|-----------|--------|
-| COMMON | $3 | 0.50 |
-| UNCOMMON | $5 | 0.30 |
-| RARE | $10 | 0.15 |
-| EPIC | $15 | 0.05 |
+| COMMON | $10 | 0.40 |
+| UNCOMMON | $15 | 0.30 |
+| RARE | $25 | 0.18 |
+| EPIC | $50 | 0.09 |
+| LEGENDARY | $100 | 0.03 |
 
-Premium pack ($50) odds:
+Epic pack ($75) odds:
 | Rarity | Card Value | Weight |
 |--------|-----------|--------|
-| COMMON | $25 | 0.35 |
-| UNCOMMON | $50 | 0.30 |
-| RARE | $75 | 0.20 |
-| EPIC | $100 | 0.10 |
-| LEGENDARY | $200 | 0.05 |
-
-Ultra pack ($100) odds:
-| Rarity | Card Value | Weight |
-|--------|-----------|--------|
-| COMMON | $50 | 0.30 |
-| UNCOMMON | $75 | 0.30 |
-| RARE | $100 | 0.20 |
-| EPIC | $200 | 0.12 |
-| LEGENDARY | $500 | 0.08 |
+| COMMON | $25 | 0.20 |
+| UNCOMMON | $50 | 0.25 |
+| RARE | $75 | 0.25 |
+| EPIC | $100 | 0.20 |
+| LEGENDARY | $200 | 0.10 |
 
 **Bundles (3):**
 - Gaming Starter Pack: $25 Steam + $25 Xbox + $10 Nintendo = $50 (face $60)
@@ -685,21 +687,32 @@ Storefront purchases earn **1 point per $1 spent**. Bundles earn **1.5 points pe
 
 ### Page: `/gacha`
 
-**Layout:** 4 pack tier cards displayed horizontally (responsive: 2x2 on mobile). Each card shows:
-- Pack name and tier badge (color-coded: Starter=green, Standard=blue, Premium=purple, Ultra=gold)
+**Layout:** 3 large pack tier cards displayed horizontally (responsive: stack on mobile). Each card shows:
+- Pack name and tier badge (color-coded: Common=green, Rare=blue, Epic=purple)
 - Price in USD
 - Points cost alternative (smaller text below price)
+- CC lock/unlock indicator (locked until first points pull)
 - "View Odds" expandable section showing the full probability table
-- Expected value displayed prominently (e.g., "Avg. value: $16.05")
+- Expected value displayed prominently (e.g., "Avg. value: $27.50")
 - Daily limit and remaining pulls today
-- Large "PULL" button (disabled if limit reached or insufficient funds)
+- Large "PULL" button → navigates to `/gacha/common`, `/gacha/rare`, or `/gacha/epic`
 
-### Pull Flow: `/gacha/pull/[packId]`
+### Pack Detail Page: `/gacha/[packTier]`
 
-**This page is the most important UX in the entire app.** Build it with Framer Motion.
+**This page is the most important UX in the entire app.** Build it with Framer Motion. Slug-based route (`/gacha/common`, `/gacha/rare`, `/gacha/epic`).
 
-**Step 1 — Charge confirmation:**
-Modal or inline confirmation: "Pull 1x Standard Pack for $15?" with payment method selector. Confirm button.
+**Hero section:** Pack name, price, EV badge, tier-themed gradient background.
+**Odds table:** Visual breakdown of rarity probabilities with progress bars.
+**Top hits:** Notable recent legendary/epic pulls.
+**Recent pulls:** Live feed of last 10-20 pulls.
+**Pool composition:** Card count by rarity.
+**Pull button:** Inline on this page (no separate pull page).
+- If CC locked: Points-only payment, button says "Pull with Points to Unlock"
+- If CC unlocked: Toggle between Points / Stripe / USDC
+- After reveal: show RevealScreen with optional ccJustUnlocked celebration banner
+
+**Step 1 — Payment selection:**
+Inline payment method selector with CC lock indicator. Points always available, Stripe/USDC locked until first points pull. Confirm button.
 
 **Step 2 — Animation sequence (2-4 seconds):**
 - Screen dims, pack appears center-screen
@@ -969,7 +982,7 @@ Logo (home) | Storefront | Gacha Packs | Marketplace | [Wallet: 💰 2,500 pts |
 | `/storefront` | Public (buy requires auth) | Browse and purchase gift cards |
 | `/storefront/[brand]` | Public | Brand-filtered view |
 | `/gacha` | Auth required | Pack selection screen |
-| `/gacha/pull/[packId]` | Auth required | Pull animation and result |
+| `/gacha/[packTier]` | Auth required | Pack detail page with pull flow |
 | `/gacha/history` | Auth required | User's pull history |
 | `/marketplace` | Public (buy/sell requires auth) | Browse P2P listings |
 | `/marketplace/sell` | Auth required | Create a listing |
@@ -1009,12 +1022,16 @@ POST /api/storefront/bundles/purchase
 
 ```
 GET  /api/gacha/packs
-  → { packs: (GachaPack & { odds: GachaOdds[], expectedValue: number, pullsToday: number })[] }
+  → { packs: (GachaPack & { odds, expectedValue, pullsToday, ccUnlocked, poolStats, recentPulls, topHits })[] }
 
 POST /api/gacha/pull
-  Body: { packId: string, paymentMethod: "STRIPE" | "USDC_BASE" | "POINTS" }
-  → { pull: GachaPull, card: GiftCard, rarityTier: RarityTier, buybackOffer: number, pointsEarned: number }
+  Body: { packTier: "COMMON" | "RARE" | "EPIC", paymentMethod: "STRIPE" | "USDC_BASE" | "POINTS" }
+  → { pull, card, rarityTier, buybackOffer, pointsEarned, ccJustUnlocked: boolean }
   → If STRIPE: { checkoutUrl: string }
+  → If CC locked: 403 { error: "CC_LOCKED", message: "..." }
+
+GET  /api/gacha/unlock-status
+  → { COMMON: boolean, RARE: boolean, EPIC: boolean }
 
 POST /api/gacha/buyback
   Body: { giftCardId: string }
@@ -1099,19 +1116,27 @@ interface PullResult {
 
 async function executeGachaPull(
   userId: string,
-  packId: string,
+  packTier: PackTier,
   paymentMethod: PaymentMethod
 ): Promise<PullResult> {
 
   // 1. VALIDATE
   const pack = await prisma.gachaPack.findUnique({
-    where: { id: packId },
+    where: { tier: packTier },
     include: { odds: true }
   });
   if (!pack || !pack.isActive) throw new Error("Pack not available");
 
-  const todayPulls = await countTodayPulls(userId, packId);
+  const todayPulls = await countTodayPulls(userId, pack.id);
   if (todayPulls >= pack.dailyLimit) throw new Error("Daily limit reached");
+
+  // 1b. CC UNLOCK GATE
+  if (paymentMethod === "STRIPE") {
+    const unlock = await prisma.userPackUnlock.findUnique({
+      where: { userId_packTier: { userId, packTier } }
+    });
+    if (!unlock) throw new CCLockedError(packTier);
+  }
 
   // 2. PROCESS PAYMENT
   if (paymentMethod === "STRIPE") {
@@ -1304,7 +1329,9 @@ async function executeBuyback(userId: string, giftCardId: string) {
 - [ ] Points payment flow works (deducts points, gives card)
 
 ### Gacha (WS2)
-- [ ] `/gacha` shows all 4 pack tiers with correct prices and odds
+- [ ] `/gacha` shows all 3 pack tiers (COMMON, RARE, EPIC) with correct prices and odds
+- [ ] First pull with points → CC unlocked celebration → Stripe now available
+- [ ] Attempting Stripe before points unlock → 403 CC_LOCKED error
 - [ ] Expected value is calculated and displayed correctly
 - [ ] Daily pull counter shows remaining pulls
 - [ ] Clicking "Pull" initiates the purchase flow
@@ -1402,7 +1429,7 @@ PHASE 3: GACHA ENGINE (WS2)
 ────────────────────────────
 Step 12: Implement gacha-engine.ts (pull logic, randomness, card selection)
 Step 13: Build /gacha page — pack tier cards with odds display
-Step 14: Build /gacha/pull/[packId] — the pull animation sequence (Framer Motion)
+Step 14: Build /gacha/[packTier] — pack detail page with inline pull flow (Framer Motion)
 Step 15: Build result screen with Keep/Sellback/List actions
 Step 16: Implement buyback logic and flow
 Step 17: Build pull history page

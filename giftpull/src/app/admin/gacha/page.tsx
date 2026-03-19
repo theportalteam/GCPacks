@@ -43,10 +43,9 @@ const rarityColors: Record<string, string> = {
 };
 
 const tierColors: Record<string, string> = {
-  STARTER: "#6B7280",
-  STANDARD: "#3B82F6",
-  PREMIUM: "#8B5CF6",
-  ULTRA: "#F59E0B",
+  COMMON: "#10B981",
+  RARE: "#3B82F6",
+  EPIC: "#8B5CF6",
 };
 
 // ── Page Component ─────────────────────────────────────
@@ -290,7 +289,7 @@ function GachaConfigContent() {
         {/* ── EV Monitor ─────────────────────────────── */}
         <Card className="mb-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4">EV Monitor</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {packs.map((pack) => {
               const liveEV = calculateEV(pack);
               const evRatio = pack.price > 0 ? (liveEV / pack.price) * 100 : 0;
@@ -373,7 +372,7 @@ function GachaConfigContent() {
                         <h3 className="text-lg font-semibold text-text-primary">
                           {pack.name}
                         </h3>
-                        <Badge variant={pack.tier === "ULTRA" ? "legendary" : pack.tier === "PREMIUM" ? "epic" : "brand"} size="sm">
+                        <Badge variant={pack.tier === "EPIC" ? "epic" : pack.tier === "RARE" ? "brand" : "success"} size="sm">
                           {pack.tier}
                         </Badge>
                       </div>

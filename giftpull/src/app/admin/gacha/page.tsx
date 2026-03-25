@@ -35,17 +35,17 @@ interface GachaPack {
 // ── Rarity colors ──────────────────────────────────────
 
 const rarityColors: Record<string, string> = {
-  COMMON: "#6B7280",
+  COMMON: "#968da3",
   UNCOMMON: "#10B981",
-  RARE: "#3B82F6",
-  EPIC: "#8B5CF6",
-  LEGENDARY: "#F59E0B",
+  RARE: "#d5bbff",
+  EPIC: "#7d00ff",
+  LEGENDARY: "#ffb1c3",
 };
 
 const tierColors: Record<string, string> = {
   COMMON: "#10B981",
-  RARE: "#3B82F6",
-  EPIC: "#8B5CF6",
+  RARE: "#d5bbff",
+  EPIC: "#7d00ff",
 };
 
 // ── Page Component ─────────────────────────────────────
@@ -303,7 +303,7 @@ function GachaConfigContent() {
                   <div className="flex items-center justify-between mb-2">
                     <span
                       className="text-sm font-semibold"
-                      style={{ color: tierColors[pack.tier] || "#3B82F6" }}
+                      style={{ color: tierColors[pack.tier] || "#d5bbff" }}
                     >
                       {pack.name}
                     </span>
@@ -362,7 +362,7 @@ function GachaConfigContent() {
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-lg"
                       style={{
-                        backgroundColor: tierColors[pack.tier] || "#3B82F6",
+                        backgroundColor: tierColors[pack.tier] || "#d5bbff",
                       }}
                     >
                       {pack.tier[0]}
@@ -510,7 +510,7 @@ function GachaConfigContent() {
                                       className="w-3 h-3 rounded-full"
                                       style={{
                                         backgroundColor:
-                                          rarityColors[odd.rarityTier] || "#6B7280",
+                                          rarityColors[odd.rarityTier] || "#968da3",
                                       }}
                                     />
                                     <span className="text-sm font-medium text-text-primary">

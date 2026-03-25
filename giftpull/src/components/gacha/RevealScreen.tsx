@@ -96,7 +96,7 @@ export function RevealScreen({
             className="p-[3px] rounded-2xl mx-auto"
             style={{
               background:
-                "linear-gradient(135deg, #F59E0B, #EF4444, #F59E0B)",
+                "linear-gradient(135deg, #ffb1c3, #7d00ff, #d5bbff)",
               backgroundSize: "200% 200%",
               animation: "shimmer 2s linear infinite",
             }}
@@ -288,7 +288,7 @@ function CardDisplay({
           className={cn(
             "text-5xl font-extrabold mb-4",
             card.rarity === "LEGENDARY"
-              ? "bg-gradient-to-r from-warning to-red-500 bg-clip-text text-transparent"
+              ? "bg-gradient-to-r from-tertiary to-primary-container bg-clip-text text-transparent"
               : "text-text-primary"
           )}
         >

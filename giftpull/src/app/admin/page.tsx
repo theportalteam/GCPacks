@@ -69,10 +69,10 @@ const revenueByDay = [
 ];
 
 const pullsByTier = [
-  { label: "Starter", value: 45, color: "#6B7280" },
-  { label: "Standard", value: 120, color: "#3B82F6" },
-  { label: "Premium", value: 78, color: "#8B5CF6" },
-  { label: "Ultra", value: 32, color: "#F59E0B" },
+  { label: "Starter", value: 45, color: "#968da3" },
+  { label: "Standard", value: 120, color: "#d5bbff" },
+  { label: "Premium", value: 78, color: "#7d00ff" },
+  { label: "Ultra", value: 32, color: "#ffb1c3" },
 ];
 
 const topBrands = [
@@ -161,7 +161,7 @@ function AdminDashboardContent() {
             icon={<UsersIcon />}
             label="Total Users"
             value={formatPoints(stats?.totalUsers ?? 0)}
-            color="#3B82F6"
+            color="#d5bbff"
           />
           <StatsCard
             icon={<RevenueIcon />}
@@ -173,13 +173,13 @@ function AdminDashboardContent() {
             icon={<GachaIcon />}
             label="Pulls Today"
             value={formatPoints(stats?.gachaPullsToday ?? 0)}
-            color="#8B5CF6"
+            color="#7d00ff"
           />
           <StatsCard
             icon={<ListingsIcon />}
             label="Active Listings"
             value={formatPoints(stats?.activeListings ?? 0)}
-            color="#F59E0B"
+            color="#ffb1c3"
           />
           <StatsCard
             icon={<PointsIcon />}
@@ -207,7 +207,7 @@ function AdminDashboardContent() {
                       className="absolute bottom-0 w-full rounded-t-lg transition-all duration-700"
                       style={{
                         height: `${(day.value / day.max) * 100}%`,
-                        background: "linear-gradient(to top, #3B82F6, #8B5CF6)",
+                        background: "linear-gradient(to top, #d5bbff, #7d00ff)",
                       }}
                     />
                   </div>

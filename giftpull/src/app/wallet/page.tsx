@@ -289,11 +289,11 @@ export default function WalletPage() {
 
           {/* Points Balance */}
           <Card className="relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#8B5CF6]/10 blur-2xl" />
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#7d00ff]/10 blur-2xl" />
             <div className="relative">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-[#8B5CF6]/20 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[#8B5CF6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-12 h-12 rounded-xl bg-[#7d00ff]/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[#7d00ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                   </svg>
                 </div>
@@ -330,7 +330,7 @@ export default function WalletPage() {
             className={cn(
               "px-5 py-2 rounded-lg text-sm font-semibold transition-all",
               activeTab === "points"
-                ? "bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/25"
+                ? "bg-[#7d00ff] text-white shadow-lg shadow-[#7d00ff]/25"
                 : "text-text-secondary hover:text-text-primary"
             )}
           >

@@ -430,7 +430,7 @@ export function PullAnimation({
                   <motion.div
                     className="relative w-56 h-80 sm:w-64 sm:h-96 rounded-2xl overflow-hidden"
                     style={{
-                      background: `linear-gradient(145deg, #131929, #1A2035)`,
+                      background: `linear-gradient(145deg, #1b1b20, #2a292f)`,
                       border: `2px solid ${hintColor}50`,
                     }}
                     initial={{ scale: 0, rotate: -10 }}
@@ -684,7 +684,7 @@ export function PullAnimation({
                     <div
                       className="relative p-[3px] rounded-2xl"
                       style={{
-                        background: `linear-gradient(135deg, #F59E0B, #EF4444, #F59E0B, #EF4444)`,
+                        background: `linear-gradient(135deg, #ffb1c3, #7d00ff, #d5bbff, #ffb1c3)`,
                         backgroundSize: "300% 300%",
                         animation: "legendaryBorderSpin 2s linear infinite",
                       }}
@@ -802,7 +802,7 @@ function RevealCardInner({
           style={
             rarityTier === "LEGENDARY"
               ? {
-                  background: "linear-gradient(135deg, #F59E0B, #EF4444)",
+                  background: "linear-gradient(135deg, #ffb1c3, #7d00ff)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                 }

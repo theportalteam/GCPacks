@@ -45,14 +45,14 @@ const tierConfig: Record<
   },
   RARE: {
     badge: "brand",
-    color: "#3B82F6",
-    glowColor: "rgba(59, 130, 246, 0.3)",
+    color: "#d5bbff",
+    glowColor: "rgba(213, 187, 255, 0.3)",
   },
   EPIC: {
     badge: "epic",
-    color: "#8B5CF6",
-    glowColor: "rgba(139, 92, 246, 0.3)",
-    gradient: "linear-gradient(135deg, #8B5CF6, #EC4899)",
+    color: "#7d00ff",
+    glowColor: "rgba(125, 0, 255, 0.3)",
+    gradient: "linear-gradient(135deg, #7d00ff, #ffb1c3)",
   },
 };
 

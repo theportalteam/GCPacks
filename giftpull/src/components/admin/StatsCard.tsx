@@ -26,7 +26,7 @@ export function StatsCard({
   label,
   value,
   trend,
-  color = "#3B82F6",
+  color = "#d5bbff",
   className,
 }: StatsCardProps) {
   const trendColors = {

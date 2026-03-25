@@ -85,8 +85,8 @@ interface PullResult {
 
 const tierColors: Record<string, string> = {
   COMMON: "#10B981",
-  RARE: "#3B82F6",
-  EPIC: "#8B5CF6",
+  RARE: "#d5bbff",
+  EPIC: "#7d00ff",
 };
 
 const tierGradients: Record<string, string> = {
@@ -269,7 +269,7 @@ export default function PackDetailPage() {
     );
   }
 
-  const tierColor = tierColors[pack.tier] || "#3B82F6";
+  const tierColor = tierColors[pack.tier] || "#d5bbff";
   const pointsCost = pack.pointsCost;
   const hasEnoughPoints = pointsBalance >= pointsCost;
   const hasEnoughUsdc = usdcBalance >= pack.price;

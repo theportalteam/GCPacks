@@ -240,7 +240,7 @@ export default function ListingDetailPage() {
   const isSold = listing?.status === "SOLD";
   const isActive = listing?.status === "ACTIVE";
 
-  const brandColor = listing ? getBrandColor(listing.giftCard.brand) : "#3B82F6";
+  const brandColor = listing ? getBrandColor(listing.giftCard.brand) : "#d5bbff";
   const brandName = listing ? getBrandDisplayName(listing.giftCard.brand) : "";
 
   const discountPercent = listing

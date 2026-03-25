@@ -59,7 +59,7 @@ export function PurchaseModal({ isOpen, onClose, item, type }: PurchaseModalProp
   const hasEnoughPoints = pointsBalance >= pointsCost;
   const hasEnoughUsdc = usdcBalance >= item.price;
 
-  const brandColor = item.brand === "BUNDLE" ? "#8B5CF6" : getBrandColor(item.brand);
+  const brandColor = item.brand === "BUNDLE" ? "#7d00ff" : getBrandColor(item.brand);
   const brandName = item.brand === "BUNDLE" ? "Bundle" : getBrandDisplayName(item.brand);
 
   // Reset state when modal opens/closes

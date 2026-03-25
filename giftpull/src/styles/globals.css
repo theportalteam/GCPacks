@@ -2,34 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg: #0B0F1A;
-  --bg-surface: #131929;
-  --bg-elevated: #1A2035;
-  --bg-border: #242C42;
-  --primary: #3B82F6;
-  --primary-hover: #2563EB;
-  --accent: #06B6D4;
+  --bg: #131318;
+  --bg-surface: #1b1b20;
+  --bg-elevated: #2a292f;
+  --bg-border: #4b4357;
+  --primary: #d5bbff;
+  --primary-hover: #e5d3ff;
+  --accent: #d3fbff;
   --success: #10B981;
   --warning: #F59E0B;
   --danger: #EF4444;
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-tertiary: #64748B;
-  --rarity-common: #6B7280;
+  --text-primary: #e4e1e9;
+  --text-secondary: #cdc2da;
+  --text-tertiary: #968da3;
+  --rarity-common: #968da3;
   --rarity-uncommon: #10B981;
-  --rarity-rare: #3B82F6;
-  --rarity-epic: #8B5CF6;
-  --rarity-legendary: #F59E0B;
+  --rarity-rare: #d5bbff;
+  --rarity-epic: #7d00ff;
+  --rarity-legendary: #ffb1c3;
 }
 
 @layer base {
   body {
     background-color: var(--bg);
     color: var(--text-primary);
-    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-family: "Manrope", system-ui, sans-serif;
     @apply antialiased;
   }
 }
@@ -41,13 +41,13 @@
 
   .gradient-border {
     @apply relative;
-    background: linear-gradient(135deg, #F59E0B, #EF4444, #8B5CF6, #3B82F6);
+    background: linear-gradient(135deg, #d5bbff, #7d00ff, #ffb1c3, #d3fbff);
     padding: 2px;
-    border-radius: 14px;
+    border-radius: 0px;
   }
 
   .gradient-border-inner {
-    @apply bg-bg-surface rounded-card;
+    @apply bg-bg-surface;
   }
 
   .rarity-common { @apply border-rarity-common; }
@@ -55,15 +55,24 @@
   .rarity-rare { @apply border-rarity-rare; }
   .rarity-epic { @apply border-rarity-epic; }
   .rarity-legendary {
-    background: linear-gradient(135deg, #F59E0B, #EF4444);
+    background: linear-gradient(135deg, #ffb1c3, #7d00ff);
     -webkit-background-clip: text;
     background-clip: text;
   }
 
   .legendary-border {
-    background: linear-gradient(135deg, #F59E0B, #EF4444, #F59E0B);
+    background: linear-gradient(135deg, #ffb1c3, #7d00ff, #d5bbff);
     background-size: 200% 200%;
     animation: shimmer 2s linear infinite;
+  }
+
+  .glass-panel {
+    background: rgba(42,41,47,0.6);
+    backdrop-filter: blur(20px);
+  }
+
+  .kinetic-gradient {
+    background: linear-gradient(135deg, #d5bbff, #7d00ff);
   }
 }
 
@@ -74,4 +83,4 @@
 ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
 
 /* Selection color */
-::selection { background: rgba(59,130,246,0.3); color: #fff; }
+::selection { background: rgba(125,0,255,0.3); color: #fff; }

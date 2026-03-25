@@ -42,11 +42,11 @@ export function generateFakeCode(): string {
 
 export function getRarityColor(rarity: string): string {
   const colors: Record<string, string> = {
-    COMMON: "#6B7280",
+    COMMON: "#968da3",
     UNCOMMON: "#10B981",
-    RARE: "#3B82F6",
-    EPIC: "#8B5CF6",
-    LEGENDARY: "#F59E0B",
+    RARE: "#d5bbff",
+    EPIC: "#7d00ff",
+    LEGENDARY: "#ffb1c3",
   };
   return colors[rarity] || colors.COMMON;
 }
@@ -75,7 +75,7 @@ export function getBrandColor(brand: string): string {
     SPOTIFY: "#1DB954",
     NETFLIX: "#E50914",
   };
-  return colors[brand] || "#3B82F6";
+  return colors[brand] || "#d5bbff";
 }
 
 export function getBrandDisplayName(brand: string): string {

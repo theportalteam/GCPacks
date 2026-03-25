@@ -1,8 +1,8 @@
 export const RARITY_CONFIG = {
   COMMON: {
     label: "Common",
-    color: "#6B7280",
-    bgMuted: "rgba(107,114,128,0.12)",
+    color: "#968da3",
+    bgMuted: "rgba(150,141,163,0.12)",
     borderClass: "border-rarity-common",
     textClass: "text-rarity-common",
     glow: "none",
@@ -19,8 +19,8 @@ export const RARITY_CONFIG = {
   },
   RARE: {
     label: "Rare",
-    color: "#3B82F6",
-    bgMuted: "rgba(59,130,246,0.12)",
+    color: "#d5bbff",
+    bgMuted: "rgba(213,187,255,0.12)",
     borderClass: "border-rarity-rare",
     textClass: "text-rarity-rare",
     glow: "shadow-glow-blue",
@@ -28,8 +28,8 @@ export const RARITY_CONFIG = {
   },
   EPIC: {
     label: "Epic",
-    color: "#8B5CF6",
-    bgMuted: "rgba(139,92,246,0.12)",
+    color: "#7d00ff",
+    bgMuted: "rgba(125,0,255,0.12)",
     borderClass: "border-rarity-epic",
     textClass: "text-rarity-epic",
     glow: "shadow-glow-purple",
@@ -37,11 +37,11 @@ export const RARITY_CONFIG = {
   },
   LEGENDARY: {
     label: "Legendary",
-    color: "#F59E0B",
-    bgMuted: "rgba(245,158,11,0.12)",
+    color: "#ffb1c3",
+    bgMuted: "rgba(255,177,195,0.12)",
     borderClass: "border-rarity-legendary",
     textClass: "text-rarity-legendary",
-    glow: "shadow-glow-gold",
+    glow: "shadow-glow-pink",
     animationIntensity: "max",
   },
 } as const;

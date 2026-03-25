@@ -65,12 +65,12 @@ export function Navbar() {
     pathname === href || pathname?.startsWith(href + "/");
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-bg-border bg-bg-surface/80 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 w-full border-b border-bg-border bg-bg">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Left: Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="text-xl font-extrabold bg-gradient-to-r from-primary via-epic to-warning bg-clip-text text-transparent">
+            <span className="font-headline font-black text-2xl tracking-tighter text-primary italic">
               GCPACKS
             </span>
           </Link>
@@ -82,14 +82,14 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
+                  "px-4 py-2 text-sm font-headline uppercase tracking-tight font-medium transition-colors flex items-center gap-1.5",
                   isActive(link.href)
-                    ? "bg-primary/15 text-primary"
-                    : "text-text-secondary hover:text-text-primary hover:bg-bg-elevated"
+                    ? "text-accent border-b-2 border-accent"
+                    : "text-text-primary/60 hover:text-text-primary"
                 )}
               >
                 {link.href === "/leaderboard" && (
-                  <Trophy className="w-3.5 h-3.5 text-warning" />
+                  <Trophy className="w-3.5 h-3.5 text-tertiary" />
                 )}
                 {link.label}
               </Link>
@@ -99,23 +99,23 @@ export function Navbar() {
           {/* Right: Auth area (desktop) */}
           <div className="hidden md:flex items-center gap-3">
             {status === "loading" && (
-              <div className="w-32 h-8 bg-bg-elevated rounded-lg animate-pulse" />
+              <div className="w-32 h-8 bg-bg-elevated animate-pulse" />
             )}
 
             {status === "authenticated" && user && (
               <>
                 {/* Points balance */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-surface rounded-lg border border-bg-border">
-                  <Coins className="w-4 h-4 text-warning" />
-                  <span className="text-sm font-medium text-text-primary">
+                <div className="flex items-center gap-1.5 bg-bg-surface px-4 py-2 border border-outline-variant/30">
+                  <Coins className="w-4 h-4 text-tertiary" />
+                  <span className="font-headline font-bold text-sm tracking-widest text-accent">
                     {formatPoints(user.pointsBalance ?? 0)}
                   </span>
                 </div>
 
                 {/* USDC balance */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-surface rounded-lg border border-bg-border">
+                <div className="flex items-center gap-1.5 bg-bg-surface px-4 py-2 border border-outline-variant/30">
                   <DollarSign className="w-4 h-4 text-success" />
-                  <span className="text-sm font-medium text-text-primary">
+                  <span className="font-headline font-bold text-sm tracking-widest text-accent">
                     {formatCurrency(user.usdcBalance ?? 0)}
                   </span>
                 </div>
@@ -125,12 +125,12 @@ export function Navbar() {
                   <button
                     onClick={() => setDropdownOpen((prev) => !prev)}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors",
+                      "flex items-center gap-2 px-3 py-1.5 transition-colors",
                       "hover:bg-bg-elevated",
                       dropdownOpen && "bg-bg-elevated"
                     )}
                   >
-                    <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">
+                    <div className="w-7 h-7 bg-primary/20 border border-primary/40 flex items-center justify-center">
                       <User className="w-4 h-4 text-primary" />
                     </div>
                     <span className="text-sm font-medium text-text-primary max-w-[100px] truncate">
@@ -146,10 +146,10 @@ export function Navbar() {
 
                   {/* Dropdown menu */}
                   {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-bg-surface border border-bg-border rounded-xl shadow-xl shadow-black/30 py-1 z-50">
+                    <div className="absolute right-0 mt-2 w-48 bg-bg-surface border border-outline-variant/30 shadow-xl shadow-black/30 py-1 z-50">
                       <Link
                         href="/profile"
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-headline uppercase tracking-tight text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
                         onClick={() => setDropdownOpen(false)}
                       >
                         <User className="w-4 h-4" />
@@ -158,20 +158,20 @@ export function Navbar() {
                       {user.isAdmin && (
                         <Link
                           href="/admin"
-                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-headline uppercase tracking-tight text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
                           onClick={() => setDropdownOpen(false)}
                         >
                           <Shield className="w-4 h-4" />
                           Admin
                         </Link>
                       )}
-                      <div className="my-1 border-t border-bg-border" />
+                      <div className="my-1 border-t border-outline-variant/30" />
                       <button
                         onClick={() => {
                           setDropdownOpen(false);
                           signOut();
                         }}
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-bg-elevated transition-colors w-full"
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-headline uppercase tracking-tight text-red-400 hover:text-red-300 hover:bg-bg-elevated transition-colors w-full"
                       >
                         <LogOut className="w-4 h-4" />
                         Log out
@@ -200,7 +200,7 @@ export function Navbar() {
 
           {/* Mobile: hamburger */}
           <button
-            className="md:hidden p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            className="md:hidden p-2 text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
             onClick={() => setMobileOpen((prev) => !prev)}
           >
             {mobileOpen ? (
@@ -214,16 +214,16 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-bg-border bg-bg/95 backdrop-blur-md">
+        <div className="md:hidden border-t border-bg-border bg-bg">
           <div className="px-4 py-4 space-y-1">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "block px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                  "block px-4 py-3 text-sm font-headline uppercase tracking-tight font-medium transition-colors",
                   isActive(link.href)
-                    ? "bg-primary/15 text-primary"
+                    ? "text-accent border-l-2 border-accent"
                     : "text-text-secondary hover:text-text-primary hover:bg-bg-elevated"
                 )}
               >
@@ -236,21 +236,21 @@ export function Navbar() {
                 <div className="pt-3 mt-3 border-t border-bg-border space-y-2">
                   <div className="flex items-center gap-4 px-4">
                     <div className="flex items-center gap-1.5">
-                      <Coins className="w-4 h-4 text-warning" />
-                      <span className="text-sm font-medium text-text-primary">
+                      <Coins className="w-4 h-4 text-tertiary" />
+                      <span className="font-headline font-bold text-sm tracking-widest text-accent">
                         {formatPoints(user.pointsBalance ?? 0)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <DollarSign className="w-4 h-4 text-success" />
-                      <span className="text-sm font-medium text-text-primary">
+                      <span className="font-headline font-bold text-sm tracking-widest text-accent">
                         {formatCurrency(user.usdcBalance ?? 0)}
                       </span>
                     </div>
                   </div>
                   <Link
                     href="/profile"
-                    className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                    className="flex items-center gap-2.5 px-4 py-3 text-sm font-headline uppercase tracking-tight text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
                   >
                     <User className="w-4 h-4" />
                     Profile
@@ -258,7 +258,7 @@ export function Navbar() {
                   {user.isAdmin && (
                     <Link
                       href="/admin"
-                      className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                      className="flex items-center gap-2.5 px-4 py-3 text-sm font-headline uppercase tracking-tight text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
                     >
                       <Shield className="w-4 h-4" />
                       Admin
@@ -266,7 +266,7 @@ export function Navbar() {
                   )}
                   <button
                     onClick={() => signOut()}
-                    className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-bg-elevated transition-colors w-full"
+                    className="flex items-center gap-2.5 px-4 py-3 text-sm font-headline uppercase tracking-tight text-red-400 hover:text-red-300 hover:bg-bg-elevated transition-colors w-full"
                   >
                     <LogOut className="w-4 h-4" />
                     Log out

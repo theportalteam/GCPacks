@@ -93,7 +93,7 @@ function getPointsTypeBadge(type: string) {
 // ── Page Component ─────────────────────────────────────
 
 export default function WalletPage() {
-  const { data: session, status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus, update: updateSession } = useSession();
   const router = useRouter();
 
   const [usdcBalance, setUsdcBalance] = useState(0);
@@ -202,6 +202,7 @@ export default function WalletPage() {
       setWithdrawSuccess(true);
       setWithdrawAddress("");
       setWithdrawAmount("");
+      await updateSession();
 
       // Refresh transactions
       setTimeout(() => {
@@ -228,6 +229,7 @@ export default function WalletPage() {
 
       if (res.ok) {
         fetchData();
+        await updateSession();
       }
     } catch {
       // ignore

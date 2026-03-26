@@ -98,7 +98,7 @@ const tierGradients: Record<string, string> = {
 export default function PackDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const user = session?.user as
     | { pointsBalance?: number; usdcBalance?: number }
     | undefined;
@@ -214,6 +214,9 @@ export default function PackDetailPage() {
         setCcUnlocked(true);
       }
 
+      // Refresh session to get updated balances
+      await updateSession();
+
       // Start animation
       setStep("animating");
       setAnimationPlaying(true);
@@ -247,7 +250,8 @@ export default function PackDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pullId: result.id }),
     });
-  }, [result]);
+    await updateSession();
+  }, [result, updateSession]);
 
   const handlePullAgain = useCallback(() => {
     setResult(null);

@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/Button";
 
 export function ProfileDropdown() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [open, setOpen] = useState(false);
   const [rollingDaily, setRollingDaily] = useState(false);
   const [dailyResult, setDailyResult] = useState<{
@@ -67,6 +67,7 @@ export function ProfileDropdown() {
       const res = await fetch("/api/points/daily-login", { method: "POST" });
       const data = await res.json();
       setDailyResult(data);
+      if (!data.alreadyClaimed) await updateSession();
     } catch {
       // silently fail
     } finally {

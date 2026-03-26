@@ -40,7 +40,7 @@ const POINTS_PER_DOLLAR = 10;
 const POINTS_COST_MULTIPLIER = 100;
 
 export function PurchaseModal({ isOpen, onClose, item, type }: PurchaseModalProps) {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const user = session?.user as
     | { pointsBalance?: number; usdcBalance?: number }
     | undefined;
@@ -109,6 +109,8 @@ export function PurchaseModal({ isOpen, onClose, item, type }: PurchaseModalProp
       setPointsEarned(earned);
       setRevealedCode(generateFakeCode());
       setSuccess(true);
+      // Refresh session to get updated balances
+      await updateSession();
     } catch {
       // In production, show error toast
     } finally {

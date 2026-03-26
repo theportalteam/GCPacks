@@ -173,7 +173,7 @@ function LoadingSkeleton() {
 export default function ListingDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const user = session?.user as
     | { id?: string; pointsBalance?: number; usdcBalance?: number }
     | undefined;
@@ -285,14 +285,15 @@ export default function ListingDetailPage() {
       }
 
       setPurchaseSuccess(true);
-      // Refresh listing data
+      // Refresh listing data and session balances
       await fetchListing();
+      await updateSession();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Purchase failed");
     } finally {
       setPurchasing(false);
     }
-  }, [listing, selectedPayment, fetchListing]);
+  }, [listing, selectedPayment, fetchListing, updateSession]);
 
   // ── Confirm handler ────────────────────────────────
   const handleConfirm = useCallback(async () => {

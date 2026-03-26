@@ -91,8 +91,24 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id;
         session.user.isAdmin = token.isAdmin;
-        session.user.pointsBalance = token.pointsBalance;
-        session.user.usdcBalance = token.usdcBalance;
+
+        // Always fetch fresh balances from DB
+        try {
+          const freshUser = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { pointsBalance: true, usdcBalance: true },
+          });
+          if (freshUser) {
+            session.user.pointsBalance = freshUser.pointsBalance;
+            session.user.usdcBalance = freshUser.usdcBalance;
+          } else {
+            session.user.pointsBalance = token.pointsBalance;
+            session.user.usdcBalance = token.usdcBalance;
+          }
+        } catch {
+          session.user.pointsBalance = token.pointsBalance;
+          session.user.usdcBalance = token.usdcBalance;
+        }
       }
       return session;
     },

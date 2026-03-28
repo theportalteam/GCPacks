@@ -9,6 +9,7 @@ const VALID_PAYMENT_METHODS: PaymentMethod[] = [
   "STRIPE",
   "USDC_BASE",
   "POINTS",
+  "PORTAL",
 ];
 
 const VALID_PACK_TIERS: PackTier[] = ["COMMON", "RARE", "EPIC"];

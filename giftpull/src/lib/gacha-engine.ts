@@ -2,6 +2,7 @@ import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { createCheckoutSession } from "@/lib/stripe";
 import { earnPoints, redeemPoints } from "@/lib/points";
+import { calculateGachaDiscount } from "@/lib/fees";
 import type { PaymentMethod, PackTier, RarityTier } from "@prisma/client";
 
 // ─── TYPES ──────────────────────────────────────────────
@@ -145,6 +146,35 @@ export async function executeGachaPull(
     });
   }
 
+  if (paymentMethod === "PORTAL") {
+    const discountedPrice = calculateGachaDiscount(pack.price, "PORTAL");
+
+    const portalRate = await prisma.portalRate.findFirst({
+      orderBy: { lockedAt: "desc" },
+    });
+    if (!portalRate) {
+      throw new Error("PORTAL rate not available");
+    }
+
+    const portalCost = Math.round((discountedPrice / portalRate.rate) * 100) / 100;
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { portalBalance: true },
+    });
+
+    if (user.portalBalance < portalCost) {
+      throw new Error(
+        `Insufficient PORTAL balance: have ${user.portalBalance.toFixed(2)}, need ${portalCost.toFixed(2)} PORTAL`
+      );
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { portalBalance: { decrement: portalCost } },
+    });
+  }
+
   // ── 3. DETERMINE RARITY (CSPRNG) ────────────────────
 
   const buf = new Uint32Array(1);
@@ -196,6 +226,17 @@ export async function executeGachaPull(
         data: { usdcBalance: { increment: pack.price } },
       });
     }
+    if (paymentMethod === "PORTAL") {
+      const discountedPrice = calculateGachaDiscount(pack.price, "PORTAL");
+      const portalRate = await prisma.portalRate.findFirst({ orderBy: { lockedAt: "desc" } });
+      if (portalRate) {
+        const portalCost = Math.round((discountedPrice / portalRate.rate) * 100) / 100;
+        await prisma.user.update({
+          where: { id: userId },
+          data: { portalBalance: { increment: portalCost } },
+        });
+      }
+    }
     // Points refunds are handled by the redeemPoints rollback at the Prisma tx level
     throw new Error(
       "No cards available for the selected rarity. Please try again later."
@@ -209,7 +250,7 @@ export async function executeGachaPull(
 
   // Points earned: 2 pts per $1 spent, 2.5x multiplier for USDC
   const basePoints = Math.floor(pack.price * 2);
-  const pointsMultiplier = paymentMethod === "USDC_BASE" ? 2.5 : 1;
+  const pointsMultiplier = paymentMethod === "USDC_BASE" || paymentMethod === "PORTAL" ? 2.5 : 1;
   const pointsEarned = Math.floor(basePoints * pointsMultiplier);
 
   // Check if this is the first points pull for this tier (CC unlock)
@@ -254,8 +295,8 @@ export async function executeGachaPull(
         type: "GACHA_PULL",
         userId,
         giftCardId: card!.id,
-        amount: paymentMethod === "POINTS" ? 0 : pack.price,
-        currency: paymentMethod === "USDC_BASE" ? "USDC" : "USD",
+        amount: paymentMethod === "POINTS" ? 0 : paymentMethod === "PORTAL" ? calculateGachaDiscount(pack.price, "PORTAL") : pack.price,
+        currency: paymentMethod === "USDC_BASE" ? "USDC" : paymentMethod === "PORTAL" ? "PORTAL" : "USD",
         paymentMethod,
         status: "COMPLETED",
         pointsEarned,

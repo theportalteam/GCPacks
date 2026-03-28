@@ -47,6 +47,7 @@ export function ProfileDropdown() {
         isAdmin?: boolean;
         pointsBalance?: number;
         usdcBalance?: number;
+        portalBalance?: number;
       }
     | undefined;
 
@@ -185,15 +186,26 @@ export function ProfileDropdown() {
 
             {/* Wallet section */}
             <div className="px-4 py-3 border-b border-bg-border">
-              <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
                   <Wallet className="w-4 h-4 text-success" />
                   <span className="text-xs text-text-secondary font-medium">
-                    GCPACKS wallet
+                    USDC
                   </span>
                 </div>
                 <span className="text-sm font-bold text-text-primary">
-                  {formatCurrency(user.usdcBalance ?? 0)} USDC
+                  {formatCurrency(user.usdcBalance ?? 0)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <Wallet className="w-4 h-4 text-[#9333ea]" />
+                  <span className="text-xs text-text-secondary font-medium">
+                    $PORTAL
+                  </span>
+                </div>
+                <span className="text-sm font-bold text-text-primary">
+                  {formatCurrency(user.portalBalance ?? 0)}
                 </span>
               </div>
 

@@ -5,9 +5,10 @@ import { createCheckoutSession } from "@/lib/stripe";
 import { earnPoints, redeemPoints } from "@/lib/points";
 import { logActivity } from "@/lib/activity";
 import { capturePortfolioSnapshot } from "@/lib/portfolio";
+import { calculateFee } from "@/lib/fees";
 import type { SellerTier, PaymentMethod } from "@prisma/client";
 
-const VALID_PAYMENT_METHODS: PaymentMethod[] = ["STRIPE", "USDC_BASE", "POINTS"];
+const VALID_PAYMENT_METHODS: PaymentMethod[] = ["STRIPE", "USDC_BASE", "POINTS", "PORTAL"];
 
 // Commission rates by seller tier
 const COMMISSION_RATES: Record<SellerTier, number> = {
@@ -330,8 +331,110 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // ── PORTAL ────────────────────────────────────────
+    if (paymentMethod === "PORTAL") {
+      const { fee: buyerFee, total: buyerTotal, feeRate: buyerFeeRate } = calculateFee(listing.askingPrice, "PORTAL");
+
+      const portalRate = await prisma.portalRate.findFirst({
+        orderBy: { lockedAt: "desc" },
+      });
+      if (!portalRate) {
+        return NextResponse.json({ error: "PORTAL rate not available" }, { status: 400 });
+      }
+
+      const portalCost = Math.round((buyerTotal / portalRate.rate) * 100) / 100;
+
+      const result = await prisma.$transaction(async (tx) => {
+        const buyer = await tx.user.findUniqueOrThrow({
+          where: { id: buyerId },
+          select: { portalBalance: true },
+        });
+
+        if (buyer.portalBalance < portalCost) {
+          throw new Error("Insufficient PORTAL balance");
+        }
+
+        await tx.user.update({
+          where: { id: buyerId },
+          data: { portalBalance: { decrement: portalCost } },
+        });
+
+        // Seller still receives USDC payout
+        await tx.user.update({
+          where: { id: listing.sellerId },
+          data: {
+            usdcBalance: { increment: sellerPayout },
+            totalSales: { increment: 1 },
+          },
+        });
+
+        const updatedListing = await tx.p2PListing.update({
+          where: { id: listingId },
+          data: { status: "SOLD", buyerId },
+        });
+
+        const updatedCard = await tx.giftCard.update({
+          where: { id: listing.giftCardId },
+          data: { status: "RESERVED", currentOwnerId: buyerId },
+        });
+
+        const buyerTransaction = await tx.transaction.create({
+          data: {
+            type: "P2P_PURCHASE",
+            userId: buyerId,
+            giftCardId: listing.giftCardId,
+            amount: listing.askingPrice,
+            paymentMethod: "PORTAL",
+            status: "COMPLETED",
+            metadata: { buyerFee, buyerFeeRate, portalRate: portalRate.rate, portalCost },
+          },
+        });
+
+        await tx.transaction.create({
+          data: {
+            type: "P2P_SALE",
+            userId: listing.sellerId,
+            giftCardId: listing.giftCardId,
+            amount: sellerPayout,
+            paymentMethod: "PORTAL",
+            status: "COMPLETED",
+            metadata: { commission, commissionRate, listingId: listing.id },
+          },
+        });
+
+        return { transaction: buyerTransaction, card: updatedCard, listing: updatedListing };
+      });
+
+      const pointsEarned = Math.floor(listing.askingPrice * POINTS_PER_DOLLAR);
+      if (pointsEarned > 0) {
+        await earnPoints({
+          userId: buyerId,
+          amount: pointsEarned,
+          type: "PURCHASE_EARN",
+          description: `P2P purchase: ${listing.giftCard.brand} $${listing.giftCard.denomination}`,
+          transactionId: result.transaction.id,
+        });
+
+        await prisma.transaction.update({
+          where: { id: result.transaction.id },
+          data: { pointsEarned },
+        });
+      }
+
+      await logActivity(buyerId, "MARKETPLACE_PURCHASE", `Bought $${listing.giftCard.denomination} ${listing.giftCard.brand} Gift Card with PORTAL`, { amount: listing.askingPrice, currency: "USD", metadata: { listingId, sellerId: listing.sellerId, buyerFee, portalRate: portalRate.rate } });
+      await logActivity(listing.sellerId, "MARKETPLACE_SALE", `Sold $${listing.giftCard.denomination} ${listing.giftCard.brand} Gift Card for $${listing.askingPrice.toFixed(2)}`, { amount: listing.askingPrice, currency: "USD", metadata: { listingId, buyerId, commission } });
+      await capturePortfolioSnapshot(buyerId);
+      await capturePortfolioSnapshot(listing.sellerId);
+
+      return NextResponse.json({
+        transaction: result.transaction,
+        card: result.card,
+        pointsEarned,
+      });
+    }
+
     return NextResponse.json(
-      { error: "Invalid payment method. Use STRIPE, USDC_BASE, or POINTS." },
+      { error: "Invalid payment method. Use STRIPE, USDC_BASE, POINTS, or PORTAL." },
       { status: 400 }
     );
   } catch (error) {

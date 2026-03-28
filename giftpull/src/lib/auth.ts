@@ -13,6 +13,7 @@ declare module "next-auth" {
       isAdmin: boolean;
       pointsBalance: number;
       usdcBalance: number;
+      portalBalance: number;
     };
   }
 
@@ -20,6 +21,7 @@ declare module "next-auth" {
     isAdmin: boolean;
     pointsBalance: number;
     usdcBalance: number;
+    portalBalance: number;
   }
 }
 
@@ -29,6 +31,7 @@ declare module "next-auth/jwt" {
     isAdmin: boolean;
     pointsBalance: number;
     usdcBalance: number;
+    portalBalance: number;
   }
 }
 
@@ -73,6 +76,7 @@ export const authOptions: NextAuthOptions = {
           isAdmin: user.isAdmin,
           pointsBalance: user.pointsBalance,
           usdcBalance: user.usdcBalance,
+          portalBalance: (user as any).portalBalance ?? 0,
         };
       },
     }),
@@ -84,6 +88,7 @@ export const authOptions: NextAuthOptions = {
         token.isAdmin = user.isAdmin;
         token.pointsBalance = user.pointsBalance;
         token.usdcBalance = user.usdcBalance;
+        token.portalBalance = user.portalBalance ?? 0;
       }
       return token;
     },
@@ -96,18 +101,21 @@ export const authOptions: NextAuthOptions = {
         try {
           const freshUser = await prisma.user.findUnique({
             where: { id: token.id },
-            select: { pointsBalance: true, usdcBalance: true },
+            select: { pointsBalance: true, usdcBalance: true, portalBalance: true },
           });
           if (freshUser) {
             session.user.pointsBalance = freshUser.pointsBalance;
             session.user.usdcBalance = freshUser.usdcBalance;
+            session.user.portalBalance = freshUser.portalBalance;
           } else {
             session.user.pointsBalance = token.pointsBalance;
             session.user.usdcBalance = token.usdcBalance;
+            session.user.portalBalance = token.portalBalance;
           }
         } catch {
           session.user.pointsBalance = token.pointsBalance;
           session.user.usdcBalance = token.usdcBalance;
+          session.user.portalBalance = token.portalBalance;
         }
       }
       return session;

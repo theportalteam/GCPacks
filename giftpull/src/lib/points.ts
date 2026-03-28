@@ -135,7 +135,7 @@ export function calculatePointsEarned(
     points *= 1.5;
   }
 
-  if (paymentMethod === "USDC_BASE") {
+  if (paymentMethod === "USDC_BASE" || paymentMethod === "PORTAL") {
     points *= 1.25;
   }
 

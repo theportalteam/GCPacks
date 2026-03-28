@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Trophy,
   Users,
+  Hexagon,
 } from "lucide-react";
 import {
   cn,
@@ -31,7 +32,7 @@ import { PullAnimation } from "@/components/gacha/PullAnimation";
 import { RevealScreen } from "@/components/gacha/RevealScreen";
 import { BuybackPrompt } from "@/components/gacha/BuybackPrompt";
 
-type PaymentMethodType = "STRIPE" | "USDC" | "POINTS";
+type PaymentMethodType = "STRIPE" | "USDC" | "POINTS" | "PORTAL";
 type PullStep = "idle" | "pulling" | "animating" | "result";
 
 const TIER_SLUG_MAP: Record<string, string> = {
@@ -100,7 +101,7 @@ export default function PackDetailPage() {
   const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
   const user = session?.user as
-    | { pointsBalance?: number; usdcBalance?: number }
+    | { pointsBalance?: number; usdcBalance?: number; portalBalance?: number }
     | undefined;
 
   const slug = (params.packTier as string).toLowerCase();
@@ -119,6 +120,7 @@ export default function PackDetailPage() {
 
   const pointsBalance = user?.pointsBalance ?? 0;
   const usdcBalance = user?.usdcBalance ?? 0;
+  const portalBalance = user?.portalBalance ?? 0;
   const isAuthenticated = status === "authenticated";
 
   // Redirect if invalid tier
@@ -177,7 +179,7 @@ export default function PackDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           packTier: pack.tier,
-          paymentMethod: paymentMethod === "USDC" ? "USDC_BASE" : paymentMethod,
+          paymentMethod: paymentMethod === "USDC" ? "USDC_BASE" : paymentMethod === "PORTAL" ? "PORTAL" : paymentMethod,
         }),
       });
 
@@ -532,7 +534,7 @@ export default function PackDetailPage() {
                     <p className="text-sm font-semibold text-text-secondary mb-3">
                       Payment Method
                     </p>
-                    <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="grid grid-cols-4 gap-3 mb-4">
                       {/* Stripe */}
                       <button
                         onClick={() => ccUnlocked && setPaymentMethod("STRIPE")}
@@ -667,6 +669,53 @@ export default function PackDetailPage() {
                           {formatPoints(pointsBalance)}
                         </span>
                       </button>
+
+                      {/* PORTAL (always available like USDC) */}
+                      <button
+                        onClick={() => ccUnlocked && setPaymentMethod("PORTAL")}
+                        disabled={!ccUnlocked}
+                        className={cn(
+                          "flex flex-col items-center gap-2 p-3 rounded-none border-2 transition-all duration-200",
+                          !ccUnlocked && "opacity-40 cursor-not-allowed",
+                          paymentMethod === "PORTAL" && ccUnlocked
+                            ? "border-[#9333ea] bg-[#9333ea]/5 shadow-lg shadow-[#9333ea]/10"
+                            : "border-border-subtle bg-surface-light/50 hover:border-border-subtle/80"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "w-9 h-9 rounded-none flex items-center justify-center",
+                            paymentMethod === "PORTAL" && ccUnlocked
+                              ? "bg-[#9333ea]/15"
+                              : "bg-surface"
+                          )}
+                        >
+                          <Hexagon
+                            className={cn(
+                              "w-4 h-4",
+                              paymentMethod === "PORTAL" && ccUnlocked
+                                ? "text-[#9333ea]"
+                                : "text-text-secondary"
+                            )}
+                          />
+                        </div>
+                        <span
+                          className={cn(
+                            "text-xs font-medium",
+                            paymentMethod === "PORTAL" && ccUnlocked
+                              ? "text-[#9333ea]"
+                              : "text-text-secondary"
+                          )}
+                        >
+                          $PORTAL
+                        </span>
+                        <span className="text-[10px] text-text-secondary">
+                          {formatCurrency(portalBalance)}
+                        </span>
+                        {paymentMethod === "PORTAL" && (
+                          <span className="text-[10px] text-[#9333ea] font-semibold">5% OFF</span>
+                        )}
+                      </button>
                     </div>
 
                     {/* Pulls remaining */}
@@ -697,7 +746,8 @@ export default function PackDetailPage() {
                             pulling ||
                             pullsRemaining <= 0 ||
                             (paymentMethod === "USDC" && !hasEnoughUsdc) ||
-                            (paymentMethod === "POINTS" && !hasEnoughPoints)
+                            (paymentMethod === "POINTS" && !hasEnoughPoints) ||
+                            (paymentMethod === "PORTAL" && portalBalance < pack.price * 0.95)
                           }
                           loading={pulling}
                         >
@@ -707,7 +757,9 @@ export default function PackDetailPage() {
                               ? `PULL WITH POINTS — ${formatPoints(pointsCost)} pts`
                               : paymentMethod === "POINTS"
                                 ? `PULL — ${formatPoints(pointsCost)} pts`
-                                : `PULL — ${formatCurrency(pack.price)}`}
+                                : paymentMethod === "PORTAL"
+                                  ? `PULL — ${formatCurrency(pack.price * 0.95)} (5% OFF)`
+                                  : `PULL — ${formatCurrency(pack.price)}`}
                         </Button>
                       </motion.div>
                     )}
@@ -721,6 +773,11 @@ export default function PackDetailPage() {
                     {paymentMethod === "POINTS" && !hasEnoughPoints && isAuthenticated && (
                       <p className="text-center text-xs text-red-400 mt-2">
                         Insufficient points balance
+                      </p>
+                    )}
+                    {paymentMethod === "PORTAL" && portalBalance < pack.price * 0.95 && isAuthenticated && (
+                      <p className="text-center text-xs text-red-400 mt-2">
+                        Insufficient PORTAL balance
                       </p>
                     )}
                   </Card>

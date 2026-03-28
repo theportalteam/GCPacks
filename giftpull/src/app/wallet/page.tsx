@@ -98,6 +98,7 @@ export default function WalletPage() {
 
   const [usdcBalance, setUsdcBalance] = useState(0);
   const [pointsBalance, setPointsBalance] = useState(0);
+  const [portalBalance, setPortalBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [ownedCards, setOwnedCards] = useState<OwnedCard[]>([]);
@@ -129,6 +130,7 @@ export default function WalletPage() {
         const walletData = await walletRes.json();
         setUsdcBalance(walletData.usdcBalance);
         setPointsBalance(walletData.pointsBalance);
+        setPortalBalance(walletData.portalBalance ?? 0);
         setTransactions(walletData.recentTransactions || []);
       }
 
@@ -257,7 +259,7 @@ export default function WalletPage() {
         <h1 className="text-3xl font-bold text-text-primary mb-8">My Wallet</h1>
 
         {/* ── Balance Cards ──────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* USDC Balance */}
           <Card className="relative overflow-hidden">
             <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/10 blur-2xl" />
@@ -309,6 +311,29 @@ export default function WalletPage() {
               </div>
               <p className="text-xs text-text-secondary">
                 Earn points from purchases, daily logins, and streaks
+              </p>
+            </div>
+          </Card>
+
+          {/* PORTAL Balance */}
+          <Card className="relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#9333ea]/10 blur-2xl" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-none bg-[#9333ea]/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[#9333ea]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-text-secondary text-sm font-medium">$PORTAL Balance</p>
+                  <p className="text-3xl font-bold text-text-primary">
+                    {formatCurrency(portalBalance)}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-text-secondary">
+                Save 50% on fees &bull; 5% off gacha pulls
               </p>
             </div>
           </Card>

@@ -67,6 +67,7 @@ enum PaymentMethod {
   STRIPE
   USDC_BASE
   POINTS
+  PORTAL
   FREE
 }
 
@@ -156,6 +157,7 @@ model User {
   walletAddress   String?    @unique
   pointsBalance   Int        @default(0)
   usdcBalance     Float      @default(0)
+  portalBalance   Float      @default(0)
   sellerTier      SellerTier @default(NEW)
   sellerRating    Float?
   totalSales      Int        @default(0)
@@ -442,6 +444,13 @@ model ActivityLog {
   txHash      String?
   metadata    Json?
   createdAt   DateTime     @default(now())
+}
+
+model PortalRate {
+  id        String   @id @default(cuid())
+  rate      Float    // 1 PORTAL = X USD
+  lockedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model PortfolioSnapshot {

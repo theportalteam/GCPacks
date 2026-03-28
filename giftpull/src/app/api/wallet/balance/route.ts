@@ -24,6 +24,7 @@ export async function GET() {
         select: {
           usdcBalance: true,
           pointsBalance: true,
+          portalBalance: true,
         },
       }),
       prisma.transaction.findMany({
@@ -56,6 +57,7 @@ export async function GET() {
     return NextResponse.json({
       usdcBalance: user.usdcBalance,
       pointsBalance: user.pointsBalance,
+      portalBalance: user.portalBalance,
       recentTransactions,
     });
   } catch (error) {

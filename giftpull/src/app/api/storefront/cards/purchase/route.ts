@@ -5,6 +5,7 @@ import { createCheckoutSession } from "@/lib/stripe";
 import { earnPoints, redeemPoints, calculatePointsEarned } from "@/lib/points";
 import { logActivity } from "@/lib/activity";
 import { capturePortfolioSnapshot } from "@/lib/portfolio";
+import { calculateFee } from "@/lib/fees";
 
 export async function POST(request: NextRequest) {
   try {
@@ -179,8 +180,81 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // ── PORTAL ─────────────────────────────────────────────
+    if (paymentMethod === "PORTAL") {
+      const { fee, total, feeRate } = calculateFee(price, "PORTAL");
+
+      // Get current PORTAL rate
+      const portalRate = await prisma.portalRate.findFirst({
+        orderBy: { lockedAt: "desc" },
+      });
+      if (!portalRate) {
+        return NextResponse.json({ error: "PORTAL rate not available" }, { status: 400 });
+      }
+
+      const portalCost = Math.round((total / portalRate.rate) * 100) / 100;
+
+      const result = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          select: { portalBalance: true },
+        });
+
+        if (user.portalBalance < portalCost) {
+          throw new Error("Insufficient PORTAL balance");
+        }
+
+        await tx.user.update({
+          where: { id: userId },
+          data: { portalBalance: { decrement: portalCost } },
+        });
+
+        const updatedCard = await tx.giftCard.update({
+          where: { id: cardId },
+          data: { status: "SOLD", currentOwnerId: userId },
+        });
+
+        const transaction = await tx.transaction.create({
+          data: {
+            type: "STOREFRONT_PURCHASE",
+            userId,
+            giftCardId: cardId,
+            amount: price,
+            paymentMethod: "PORTAL",
+            status: "COMPLETED",
+            metadata: { fee, feeRate, portalRate: portalRate.rate, portalCost },
+          },
+        });
+
+        return { transaction, card: updatedCard };
+      });
+
+      const pointsEarned = calculatePointsEarned(price, "PORTAL", false);
+      await earnPoints({
+        userId,
+        amount: pointsEarned,
+        type: "PURCHASE_EARN",
+        description: `Storefront purchase: ${card.brand} $${card.denomination}`,
+        transactionId: result.transaction.id,
+      });
+
+      await prisma.transaction.update({
+        where: { id: result.transaction.id },
+        data: { pointsEarned },
+      });
+
+      await logActivity(userId, "STOREFRONT_PURCHASE", `Purchased $${card.denomination} ${card.brand} Gift Card with PORTAL`, { amount: price, currency: "USD", metadata: { cardBrand: card.brand, cardId, fee, portalRate: portalRate.rate } });
+      await capturePortfolioSnapshot(userId);
+
+      return NextResponse.json({
+        transaction: result.transaction,
+        card: result.card,
+        pointsEarned,
+      });
+    }
+
     return NextResponse.json(
-      { error: "Invalid payment method. Use STRIPE, USDC_BASE, or POINTS." },
+      { error: "Invalid payment method. Use STRIPE, USDC_BASE, POINTS, or PORTAL." },
       { status: 400 }
     );
   } catch (error) {

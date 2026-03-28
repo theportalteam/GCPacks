@@ -21,15 +21,17 @@ import {
   CircleDollarSign,
   Coins,
   Loader2,
+  Hexagon,
 } from "lucide-react";
 import { cn, formatCurrency, formatPoints, getBrandColor, getBrandDisplayName } from "@/lib/utils";
+import { calculateFee } from "@/lib/fees";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { DisputeModal } from "@/components/marketplace/DisputeModal";
 
-type PaymentMethodType = "STRIPE" | "USDC_BASE" | "POINTS";
+type PaymentMethodType = "STRIPE" | "USDC_BASE" | "POINTS" | "PORTAL";
 
 // Points cost multiplier (100 points = $1)
 const POINTS_COST_MULTIPLIER = 100;
@@ -175,7 +177,7 @@ export default function ListingDetailPage() {
   const router = useRouter();
   const { data: session, update: updateSession } = useSession();
   const user = session?.user as
-    | { id?: string; pointsBalance?: number; usdcBalance?: number }
+    | { id?: string; pointsBalance?: number; usdcBalance?: number; portalBalance?: number }
     | undefined;
 
   const listingId = params.listingId as string;
@@ -202,6 +204,7 @@ export default function ListingDetailPage() {
 
   const pointsBalance = user?.pointsBalance ?? 0;
   const usdcBalance = user?.usdcBalance ?? 0;
+  const portalBalance = user?.portalBalance ?? 0;
 
   // Fetch listing
   const fetchListing = useCallback(async () => {
@@ -256,6 +259,8 @@ export default function ListingDetailPage() {
     : 0;
   const hasEnoughPoints = pointsBalance >= pointsCost;
   const hasEnoughUsdc = usdcBalance >= (listing?.askingPrice ?? 0);
+  const feeInfo = listing ? calculateFee(listing.askingPrice, selectedPayment) : { fee: 0, total: 0, feeRate: 0 };
+  const hasEnoughPortal = portalBalance >= feeInfo.total;
 
   // ── Purchase handler ───────────────────────────────
   const handlePurchase = useCallback(async () => {
@@ -730,7 +735,7 @@ export default function ListingDetailPage() {
               <p className="text-sm font-semibold text-text-secondary mb-3">
                 Payment Method
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {/* Stripe */}
                 <button
                   onClick={() => setSelectedPayment("STRIPE")}
@@ -845,25 +850,79 @@ export default function ListingDetailPage() {
                     You have: {formatPoints(pointsBalance)}
                   </span>
                 </button>
+
+                {/* PORTAL */}
+                <button
+                  onClick={() => setSelectedPayment("PORTAL")}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-4 rounded-none border-2 transition-all duration-200",
+                    selectedPayment === "PORTAL"
+                      ? "border-[#9333ea] bg-[#9333ea]/5 shadow-lg shadow-[#9333ea]/10"
+                      : "border-border-subtle bg-surface-light/50 hover:border-border-subtle/80 hover:bg-surface-light"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-10 h-10 rounded-none flex items-center justify-center",
+                      selectedPayment === "PORTAL" ? "bg-[#9333ea]/15" : "bg-surface"
+                    )}
+                  >
+                    <Hexagon
+                      className={cn(
+                        "w-5 h-5",
+                        selectedPayment === "PORTAL" ? "text-[#9333ea]" : "text-text-secondary"
+                      )}
+                    />
+                  </div>
+                  <span
+                    className={cn(
+                      "text-sm font-medium",
+                      selectedPayment === "PORTAL" ? "text-[#9333ea]" : "text-text-secondary"
+                    )}
+                  >
+                    $PORTAL
+                  </span>
+                  <span className="text-[10px] text-text-secondary">
+                    Balance: {formatCurrency(portalBalance)}
+                  </span>
+                  {!hasEnoughPortal && selectedPayment === "PORTAL" && (
+                    <span className="text-[10px] text-red-400">Insufficient balance</span>
+                  )}
+                </button>
               </div>
             </div>
 
             {/* Summary */}
             <div className="bg-surface-light/50 border border-border-subtle rounded-none p-4 mb-6">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-text-secondary">Item</span>
+                <span className="text-text-secondary">Subtotal</span>
                 <span className="text-text-primary font-medium">
-                  {formatCurrency(listing.giftCard.denomination)} {brandName}
+                  {selectedPayment === "POINTS"
+                    ? `${formatPoints(pointsCost)} Points`
+                    : formatCurrency(listing.askingPrice)}
                 </span>
               </div>
+              {selectedPayment !== "POINTS" && (
+                <div className="flex items-center justify-between text-sm mt-2">
+                  <span className="text-text-secondary">
+                    Fee ({(feeInfo.feeRate * 100).toFixed(1)}%
+                    {selectedPayment === "PORTAL" && (
+                      <span className="text-[#9333ea]"> — PORTAL savings</span>
+                    )}
+                    )
+                  </span>
+                  <span className="text-text-primary font-medium">
+                    {formatCurrency(feeInfo.fee)}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-sm mt-2">
                 <span className="text-text-secondary">Payment</span>
                 <span className="text-text-primary font-medium">
                   {selectedPayment === "STRIPE" && "Credit / Debit Card"}
-                  {selectedPayment === "USDC_BASE" &&
-                    `USDC (${formatCurrency(listing.askingPrice)})`}
-                  {selectedPayment === "POINTS" &&
-                    `${formatPoints(pointsCost)} Points`}
+                  {selectedPayment === "USDC_BASE" && "USDC"}
+                  {selectedPayment === "POINTS" && "Points"}
+                  {selectedPayment === "PORTAL" && "$PORTAL"}
                 </span>
               </div>
               <div className="h-px bg-border-subtle my-3" />
@@ -872,7 +931,7 @@ export default function ListingDetailPage() {
                 <span className="text-lg font-bold text-text-primary">
                   {selectedPayment === "POINTS"
                     ? `${formatPoints(pointsCost)} pts`
-                    : formatCurrency(listing.askingPrice)}
+                    : formatCurrency(feeInfo.total)}
                 </span>
               </div>
             </div>
@@ -886,7 +945,8 @@ export default function ListingDetailPage() {
               disabled={
                 purchasing ||
                 (selectedPayment === "USDC_BASE" && !hasEnoughUsdc) ||
-                (selectedPayment === "POINTS" && !hasEnoughPoints)
+                (selectedPayment === "POINTS" && !hasEnoughPoints) ||
+                (selectedPayment === "PORTAL" && !hasEnoughPortal)
               }
               onClick={handlePurchase}
             >
@@ -895,7 +955,7 @@ export default function ListingDetailPage() {
                 : `Confirm Purchase \u2014 ${
                     selectedPayment === "POINTS"
                       ? `${formatPoints(pointsCost)} pts`
-                      : formatCurrency(listing.askingPrice)
+                      : formatCurrency(feeInfo.total)
                   }`}
             </Button>
 

@@ -10,13 +10,15 @@ import {
   Copy,
   ShoppingBag,
   Loader2,
+  Hexagon,
 } from "lucide-react";
 import { cn, formatCurrency, formatPoints, getBrandColor, getBrandDisplayName, generateFakeCode } from "@/lib/utils";
+import { calculateFee } from "@/lib/fees";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
-type PaymentMethodType = "STRIPE" | "USDC" | "POINTS";
+type PaymentMethodType = "STRIPE" | "USDC" | "POINTS" | "PORTAL";
 
 interface PurchaseItem {
   id: string;
@@ -42,7 +44,7 @@ const POINTS_COST_MULTIPLIER = 100;
 export function PurchaseModal({ isOpen, onClose, item, type }: PurchaseModalProps) {
   const { data: session, update: updateSession } = useSession();
   const user = session?.user as
-    | { pointsBalance?: number; usdcBalance?: number }
+    | { pointsBalance?: number; usdcBalance?: number; portalBalance?: number }
     | undefined;
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodType>("STRIPE");
@@ -55,9 +57,16 @@ export function PurchaseModal({ isOpen, onClose, item, type }: PurchaseModalProp
 
   const pointsBalance = user?.pointsBalance ?? 0;
   const usdcBalance = user?.usdcBalance ?? 0;
+  const portalBalance = user?.portalBalance ?? 0;
   const pointsCost = Math.ceil(item.price * POINTS_COST_MULTIPLIER);
   const hasEnoughPoints = pointsBalance >= pointsCost;
   const hasEnoughUsdc = usdcBalance >= item.price;
+
+  // Fee calculation
+  const feeInfo = calculateFee(item.price, selectedMethod);
+  const showFee = selectedMethod !== "POINTS";
+  const displayTotal = selectedMethod === "POINTS" ? pointsCost : feeInfo.total;
+  const hasEnoughPortal = portalBalance >= feeInfo.total;
 
   const brandColor = item.brand === "BUNDLE" ? "#7d00ff" : getBrandColor(item.brand);
   const brandName = item.brand === "BUNDLE" ? "Bundle" : getBrandDisplayName(item.brand);
@@ -254,7 +263,7 @@ export function PurchaseModal({ isOpen, onClose, item, type }: PurchaseModalProp
           <p className="text-sm font-semibold text-text-secondary mb-3">
             Payment Method
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Stripe */}
             <button
               onClick={() => setSelectedMethod("STRIPE")}
@@ -383,21 +392,83 @@ export function PurchaseModal({ isOpen, onClose, item, type }: PurchaseModalProp
                 You have: {formatPoints(pointsBalance)}
               </span>
             </button>
+
+            {/* PORTAL */}
+            <button
+              onClick={() => setSelectedMethod("PORTAL")}
+              className={cn(
+                "flex flex-col items-center gap-2 p-4 rounded-none border-2 transition-all duration-200",
+                selectedMethod === "PORTAL"
+                  ? "border-[#9333ea] bg-[#9333ea]/5 shadow-lg shadow-[#9333ea]/10"
+                  : "border-bg-border bg-bg-elevated/50 hover:border-bg-border/80 hover:bg-bg-elevated"
+              )}
+            >
+              <div
+                className={cn(
+                  "w-10 h-10 rounded-none flex items-center justify-center",
+                  selectedMethod === "PORTAL" ? "bg-[#9333ea]/15" : "bg-bg-surface"
+                )}
+              >
+                <Hexagon
+                  className={cn(
+                    "w-5 h-5",
+                    selectedMethod === "PORTAL"
+                      ? "text-[#9333ea]"
+                      : "text-text-secondary"
+                  )}
+                />
+              </div>
+              <span
+                className={cn(
+                  "text-sm font-medium",
+                  selectedMethod === "PORTAL"
+                    ? "text-[#9333ea]"
+                    : "text-text-secondary"
+                )}
+              >
+                $PORTAL
+              </span>
+              <span className="text-[10px] text-text-secondary">
+                Balance: {formatCurrency(portalBalance)}
+              </span>
+              {!hasEnoughPortal && selectedMethod === "PORTAL" && (
+                <span className="text-[10px] text-red-400">Insufficient balance</span>
+              )}
+            </button>
           </div>
         </div>
 
         {/* Summary */}
         <div className="bg-bg-elevated/50 border border-bg-border rounded-none p-4 mb-6">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-text-secondary">Item</span>
-            <span className="text-text-primary font-medium">{item.name}</span>
+            <span className="text-text-secondary">Subtotal</span>
+            <span className="text-text-primary font-medium">
+              {selectedMethod === "POINTS"
+                ? `${formatPoints(pointsCost)} Points`
+                : formatCurrency(item.price)}
+            </span>
           </div>
+          {showFee && (
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-text-secondary">
+                Fee ({(feeInfo.feeRate * 100).toFixed(1)}%
+                {selectedMethod === "PORTAL" && (
+                  <span className="text-[#9333ea]"> — PORTAL savings</span>
+                )}
+                )
+              </span>
+              <span className="text-text-primary font-medium">
+                {formatCurrency(feeInfo.fee)}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between text-sm mt-2">
             <span className="text-text-secondary">Payment</span>
             <span className="text-text-primary font-medium">
               {selectedMethod === "STRIPE" && "Credit / Debit Card"}
-              {selectedMethod === "USDC" && `USDC (${formatCurrency(item.price)})`}
-              {selectedMethod === "POINTS" && `${formatPoints(pointsCost)} Points`}
+              {selectedMethod === "USDC" && "USDC"}
+              {selectedMethod === "POINTS" && "Points"}
+              {selectedMethod === "PORTAL" && "$PORTAL"}
             </span>
           </div>
           <div className="h-px bg-bg-border my-3" />
@@ -406,7 +477,7 @@ export function PurchaseModal({ isOpen, onClose, item, type }: PurchaseModalProp
             <span className="text-lg font-bold text-text-primary">
               {selectedMethod === "POINTS"
                 ? `${formatPoints(pointsCost)} pts`
-                : formatCurrency(item.price)}
+                : formatCurrency(feeInfo.total)}
             </span>
           </div>
         </div>
@@ -420,14 +491,15 @@ export function PurchaseModal({ isOpen, onClose, item, type }: PurchaseModalProp
           disabled={
             loading ||
             (selectedMethod === "USDC" && !hasEnoughUsdc) ||
-            (selectedMethod === "POINTS" && !hasEnoughPoints)
+            (selectedMethod === "POINTS" && !hasEnoughPoints) ||
+            (selectedMethod === "PORTAL" && !hasEnoughPortal)
           }
           onClick={handleConfirm}
         >
           {loading ? (
             "Processing..."
           ) : (
-            <>Confirm Purchase &mdash; {selectedMethod === "POINTS" ? `${formatPoints(pointsCost)} pts` : formatCurrency(item.price)}</>
+            <>Confirm Purchase &mdash; {selectedMethod === "POINTS" ? `${formatPoints(pointsCost)} pts` : formatCurrency(feeInfo.total)}</>
           )}
         </Button>
 

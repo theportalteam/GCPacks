@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" fill="none">
+  <rect width="120" height="80" rx="8" fill="#131318"/>
+  <text x="60" y="38" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="22" fill="#FF9900">amazon</text>
+  <path d="M32 45 Q60 58 88 45" stroke="#FF9900" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M78 42 L88 45 L82 50" stroke="#FF9900" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="60" y="68" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#968da3" letter-spacing="2">GIFT CARD</text>
+</svg>

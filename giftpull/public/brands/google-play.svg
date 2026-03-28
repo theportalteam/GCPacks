@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" fill="none">
+  <rect width="120" height="80" rx="8" fill="#131318"/>
+  <path d="M45 20 L75 36 L45 52 Z" fill="none" stroke="#4285F4" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M45 20 L75 36" stroke="#EA4335" stroke-width="2.5"/>
+  <path d="M75 36 L45 52" stroke="#34A853" stroke-width="2.5"/>
+  <path d="M45 20 L45 52" stroke="#FBBC05" stroke-width="2.5"/>
+  <text x="60" y="68" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="8" fill="#4285F4" letter-spacing="1">GOOGLE PLAY</text>
+</svg>

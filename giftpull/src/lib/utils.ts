@@ -93,3 +93,19 @@ export function getBrandDisplayName(brand: string): string {
   };
   return names[brand] || brand;
 }
+
+export function getBrandLogo(brand: string): string | undefined {
+  const logos: Record<string, string> = {
+    XBOX: "/brands/xbox.svg",
+    STEAM: "/brands/steam.svg",
+    NINTENDO: "/brands/nintendo.svg",
+    PLAYSTATION: "/brands/playstation.svg",
+    GOOGLE_PLAY: "/brands/google-play.svg",
+    AMAZON: "/brands/amazon.svg",
+    APPLE: "/brands/apple.svg",
+    ROBLOX: "/brands/roblox.svg",
+    SPOTIFY: "/brands/spotify.svg",
+    NETFLIX: "/brands/netflix.svg",
+  };
+  return logos[brand];
+}

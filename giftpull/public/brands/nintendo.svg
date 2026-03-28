@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" fill="none">
+  <rect width="120" height="80" rx="8" fill="#131318"/>
+  <rect x="35" y="18" width="50" height="32" rx="16" stroke="#E60012" stroke-width="3" fill="none"/>
+  <circle cx="50" cy="34" r="6" stroke="#E60012" stroke-width="2" fill="none"/>
+  <circle cx="50" cy="34" r="2" fill="#E60012"/>
+  <text x="60" y="68" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="8" fill="#E60012" letter-spacing="2">NINTENDO</text>
+</svg>

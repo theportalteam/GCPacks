@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" fill="none">
+  <rect width="120" height="80" rx="8" fill="#131318"/>
+  <rect x="46" y="16" width="8" height="38" rx="1" fill="#E50914"/>
+  <rect x="66" y="16" width="8" height="38" rx="1" fill="#E50914"/>
+  <path d="M46 16 L74 54" stroke="#E50914" stroke-width="8"/>
+  <text x="60" y="68" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="9" fill="#E50914" letter-spacing="2">NETFLIX</text>
+</svg>

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ShoppingCart } from "lucide-react";
-import { cn, formatCurrency, getBrandColor, getBrandDisplayName, getRarityColor } from "@/lib/utils";
+import { cn, formatCurrency, getBrandColor, getBrandDisplayName, getBrandLogo, getRarityColor } from "@/lib/utils";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -14,7 +14,7 @@ export interface StorefrontCardData {
   brand: string;
   denomination: number;
   fmv: number;
-  listedPrice: number;
+  listedPrice: number | null;
   discountPercent: number | null;
   rarityTier: string | null;
 }
@@ -28,9 +28,10 @@ export function StorefrontCard({ card }: StorefrontCardProps) {
 
   const brandColor = getBrandColor(card.brand);
   const brandName = getBrandDisplayName(card.brand);
+  const brandLogo = getBrandLogo(card.brand);
   const hasDiscount = card.discountPercent != null && card.discountPercent > 0;
   const originalPrice = card.fmv;
-  const salePrice = card.listedPrice;
+  const salePrice = card.listedPrice ?? card.denomination;
 
   return (
     <>
@@ -87,6 +88,18 @@ export function StorefrontCard({ card }: StorefrontCardProps) {
             </Badge>
           )}
         </div>
+
+        {/* Brand image */}
+        {brandLogo && (
+          <div className="relative mb-3">
+            <img
+              src={brandLogo}
+              alt={`${brandName} Gift Card`}
+              className="w-full h-20 object-contain rounded-none"
+              style={{ filter: `drop-shadow(0 0 8px ${brandColor}30)` }}
+            />
+          </div>
+        )}
 
         {/* Denomination */}
         <div className="relative mb-4">
@@ -157,7 +170,7 @@ export function StorefrontCard({ card }: StorefrontCardProps) {
           id: card.id,
           brand: card.brand,
           denomination: card.denomination,
-          price: card.listedPrice,
+          price: card.listedPrice ?? card.denomination,
           discountPercent: card.discountPercent,
           name: `${formatCurrency(card.denomination)} ${brandName} Gift Card`,
         }}

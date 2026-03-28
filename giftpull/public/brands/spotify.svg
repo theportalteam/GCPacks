@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" fill="none">
+  <rect width="120" height="80" rx="8" fill="#131318"/>
+  <circle cx="60" cy="34" r="18" fill="#1DB954"/>
+  <path d="M49 28 Q60 24 71 28" stroke="#131318" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M51 34 Q60 30 69 34" stroke="#131318" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M53 40 Q60 37 67 40" stroke="#131318" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <text x="60" y="68" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="9" fill="#1DB954" letter-spacing="2">SPOTIFY</text>
+</svg>

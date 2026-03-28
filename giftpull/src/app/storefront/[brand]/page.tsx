@@ -156,10 +156,10 @@ export default function BrandStorefrontPage() {
     // Sort
     switch (sortBy) {
       case "price_asc":
-        result.sort((a, b) => a.listedPrice - b.listedPrice);
+        result.sort((a, b) => (a.listedPrice ?? a.denomination) - (b.listedPrice ?? b.denomination));
         break;
       case "price_desc":
-        result.sort((a, b) => b.listedPrice - a.listedPrice);
+        result.sort((a, b) => (b.listedPrice ?? b.denomination) - (a.listedPrice ?? a.denomination));
         break;
       case "discount_desc":
         result.sort(

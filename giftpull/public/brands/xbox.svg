@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" fill="none">
+  <rect width="120" height="80" rx="8" fill="#131318"/>
+  <circle cx="60" cy="36" r="16" stroke="#107C10" stroke-width="3" fill="none"/>
+  <text x="60" y="42" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="16" fill="#107C10">X</text>
+  <text x="60" y="68" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="10" fill="#107C10" letter-spacing="3">XBOX</text>
+</svg>

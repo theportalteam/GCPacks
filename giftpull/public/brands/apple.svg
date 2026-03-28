@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" fill="none">
+  <rect width="120" height="80" rx="8" fill="#131318"/>
+  <path d="M60 18 Q64 14 68 18" stroke="#A2AAAD" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M60 22 C52 22 46 30 46 38 C46 48 54 54 60 54 C66 54 74 48 74 38 C74 30 68 22 60 22Z" fill="#A2AAAD"/>
+  <text x="60" y="68" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="10" fill="#A2AAAD" letter-spacing="2">APPLE</text>
+</svg>
